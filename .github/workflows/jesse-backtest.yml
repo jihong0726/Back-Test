@@ -59,7 +59,7 @@ jobs:
           jesse backtest --export-html --export-json
 
       - name: 上传回测结果压缩包
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jesse-strategy-report
           path: |

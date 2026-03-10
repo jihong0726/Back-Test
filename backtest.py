@@ -6,106 +6,186 @@ import time
 # ==========================================
 # ⚙️ 版本控制
 # ==========================================
-VERSION = "V4.0_High_Frequency_Daily_Trader"
+VERSION = "V5.0_5m_HighFreq_10_Fighters"
 
-def fetch_massive_5m_data(symbol="BTCUSDT", interval="5m"):
-    print(f"[{VERSION}] 📡 正在挑战交易所极限：疯狂拉取 5分钟 历史数据...")
+def fetch_safe_5m_data(symbol="BTCUSDT", interval="5m"):
+    print(f"[{VERSION}] 📡 启动 5 分钟级别数据抓取 (自动探测交易所底线)...")
     url = "https://api.bitget.com/api/v2/mix/market/candles"
     end_time = str(int(time.time() * 1000))
-    # 试图拉取 2 年前的数据
-    target_time = int((time.time() - 2 * 365 * 24 * 60 * 60) * 1000) 
     
     all_data = []
-    # 2年5分钟线大约需要 210 次请求 (每次 1000 根)
-    # 我们设置最大循环 250 次，但如果交易所中途不给数据了，会自动停止
-    for i in range(250): 
+    # 设置合理上限，防止鬼打墙
+    for i in range(100): 
         params = {"symbol": symbol, "productType": "USDT-FUTURES", "granularity": interval, "endTime": end_time, "limit": "1000"}
         try:
             res = requests.get(url, params=params).json()
             data = res.get("data", [])
             
-            # 交易所 API 的隐藏墙：如果不给数据了，说明触及了历史深度限制
             if not data:
-                print(f"⚠️ 交易所公共 API 历史深度触达极限！已无法获取更早的数据。")
+                break
+                
+            new_end_time = data[-1][0]
+            # 修复“鬼打墙”漏洞：如果交易所返回的最老时间不再推进，直接跳出
+            if str(new_end_time) == str(end_time):
+                print("🛑 触及交易所 5 分钟数据历史深度墙，停止抓取。")
                 break
                 
             all_data.extend(data)
-            end_time = data[-1][0]
-            
-            if int(end_time) < target_time: 
-                break
-                
-            # 打印进度条，安抚焦虑
-            if i % 10 == 0:
-                print(f"   已抓取 {len(all_data)} 根 K 线，当前追溯至: {pd.to_datetime(int(end_time), unit='ms').strftime('%Y-%m-%d')}")
-                
-            time.sleep(0.15) # 防止触发 429 Too Many Requests
+            end_time = new_end_time
+            time.sleep(0.15) 
         except Exception as e:
             print(f"抓取中断: {e}")
             break
 
+    # 清洗和去重
     df = pd.DataFrame(all_data, columns=['timestamp', 'open', 'high', 'low', 'close', 'base_vol', 'quote_vol'])
     df['timestamp'] = pd.to_numeric(df['timestamp'])
+    df = df.drop_duplicates(subset=['timestamp']) # 确保没有重复的脏数据
     df = df.sort_values('timestamp').reset_index(drop=True)
     
     for col in ['open', 'high', 'low', 'close']: df[col] = df[col].astype(float)
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     
-    print(f"✅ 最终成功获取了 {len(df)} 根 5分钟 K线！起始时间: {df['timestamp'].iloc[0].strftime('%Y-%m-%d')}")
+    print(f"✅ 成功获取 {len(df)} 根【真实有效】的 5 分钟 K线！")
     return df
 
-def run_high_frequency_strategy(df):
-    if df.empty: return df
+def calculate_all_indicators(df):
+    # 均线系统
+    df['sma_20'] = df['close'].rolling(20).mean()
+    df['sma_50'] = df['close'].rolling(50).mean()
+    df['sma_200'] = df['close'].rolling(200).mean()
+    df['ema_10'] = df['close'].ewm(span=10, adjust=False).mean()
+    df['ema_30'] = df['close'].ewm(span=30, adjust=False).mean()
+    df['ema_50'] = df['close'].ewm(span=50, adjust=False).mean()
+    df['ema_200'] = df['close'].ewm(span=200, adjust=False).mean()
     
-    # 极度敏感的指标：EMA 5 和 EMA 15，保证每天频繁交叉
-    df['ema_5'] = df['close'].ewm(span=5, adjust=False).mean()
-    df['ema_15'] = df['close'].ewm(span=15, adjust=False).mean()
+    # RSI
+    delta = df['close'].diff()
+    gain = delta.where(delta > 0, 0).ewm(alpha=1/14, adjust=False).mean()
+    loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, adjust=False).mean()
+    rs = gain / loss
+    df['rsi'] = 100 - (100 / (1 + rs))
     
-    df['signal'] = np.where(df['ema_5'] > df['ema_15'], 1, -1)
-    df['position'] = df['signal'].shift(1).fillna(0)
+    # 布林带
+    df['bb_std'] = df['close'].rolling(20).std()
+    df['bb_upper'] = df['sma_20'] + 2 * df['bb_std']
+    df['bb_lower'] = df['sma_20'] - 2 * df['bb_std']
+    
+    # MACD
+    df['macd'] = df['close'].ewm(span=12, adjust=False).mean() - df['close'].ewm(span=26, adjust=False).mean()
+    df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
+    df['macd_hist'] = df['macd'] - df['macd_signal']
+    
+    # 海龟突破
+    df['high_20'] = df['high'].rolling(20).max().shift(1)
+    df['low_20'] = df['low'].rolling(20).min().shift(1)
+    df['high_50'] = df['high'].rolling(50).max().shift(1)
+    df['low_50'] = df['low'].rolling(50).min().shift(1)
+    
+    # ATR
+    df['tr0'] = abs(df['high'] - df['low'])
+    df['tr1'] = abs(df['high'] - df['close'].shift())
+    df['tr2'] = abs(df['low'] - df['close'].shift())
+    df['atr'] = df[['tr0', 'tr1', 'tr2']].max(axis=1).rolling(14).mean()
 
-    # 计算真实利润与 0.06% 手续费摩擦
+    return df
+
+def battle_royale_5m(df):
+    df = calculate_all_indicators(df)
     fee_rate = 0.0006
     df['market_returns'] = df['close'].pct_change()
-    df['trade_happened'] = df['position'].diff().fillna(0) != 0
-    df['fee_cost'] = np.where(df['trade_happened'], fee_rate, 0)
     
-    df['gross_returns'] = df['position'] * df['market_returns']
-    df['net_returns'] = df['gross_returns'] - df['fee_cost']
+    strategies = {}
     
-    df['累计市场收益'] = (1 + df['market_returns']).cumprod() - 1
-    df['累计策略毛收益'] = (1 + df['gross_returns']).cumprod() - 1
-    df['累计策略净收益'] = (1 + df['net_returns']).cumprod() - 1
+    # 10 位选手的核心逻辑（不变，但在5分钟线上触发会极其频繁）
+    strategies['1.老军医(SMA50/200)'] = np.where(df['sma_50'] > df['sma_200'], 1, -1)
+    strategies['2.快刀手(EMA10/30)'] = np.where(df['ema_10'] > df['ema_30'], 1, -1)
     
-    # 计算日均交易次数，验证是否达标
+    sig3 = pd.Series(0, index=df.index)
+    sig3.loc[(df['ema_50'] > df['sma_200']) & (df['rsi'] > 55)] = 1
+    sig3.loc[(df['ema_50'] < df['sma_200']) & (df['rsi'] < 45)] = -1
+    strategies['3.卫冕冠军(均线+RSI)'] = sig3.replace(0, np.nan).ffill().fillna(0)
+    
+    sig4 = pd.Series(np.nan, index=df.index)
+    sig4.loc[df['close'] < df['bb_lower']] = 1
+    sig4.loc[df['close'] > df['bb_upper']] = -1
+    strategies['4.抄底狂魔(布林带逆势)'] = sig4.ffill().fillna(0)
+    
+    strategies['5.动能骑士(MACD柱子)'] = np.where(df['macd_hist'] > 0, 1, -1)
+    
+    sig6 = pd.Series(np.nan, index=df.index)
+    sig6.loc[df['close'] > df['high_20']] = 1
+    sig6.loc[df['close'] < df['low_20']] = -1
+    strategies['6.小海龟(20突破)'] = sig6.ffill().fillna(0)
+    
+    sig7 = pd.Series(np.nan, index=df.index)
+    sig7.loc[df['close'] > df['high_50']] = 1
+    sig7.loc[df['close'] < df['low_50']] = -1
+    strategies['7.大海龟(50突破)'] = sig7.ffill().fillna(0)
+    
+    sig8 = pd.Series(np.nan, index=df.index)
+    sig8.loc[df['rsi'] < 30] = 1
+    sig8.loc[df['rsi'] > 70] = -1
+    strategies['8.极端反转(纯RSI)'] = sig8.ffill().fillna(0)
+    
+    sig9 = pd.Series(0, index=df.index)
+    sig9.loc[(df['close'] > df['ema_200']) & (df['close'] < df['sma_20'])] = 1
+    sig9.loc[(df['close'] < df['ema_200']) & (df['close'] > df['sma_20'])] = -1
+    strategies['9.趋势回调(牛市买跌)'] = sig9.replace(0, np.nan).ffill().fillna(0)
+    
+    sig10 = pd.Series(np.nan, index=df.index)
+    sig10.loc[df['close'] > (df['sma_50'] + df['atr'])] = 1
+    sig10.loc[df['close'] < (df['sma_50'] - df['atr'])] = -1
+    strategies['10.波动率猎手(ATR突破)'] = sig10.ffill().fillna(0)
+
+    results = []
     total_days = (df['timestamp'].iloc[-1] - df['timestamp'].iloc[0]).days
     total_days = total_days if total_days > 0 else 1
-    total_trades = df['trade_happened'].sum()
-    trades_per_day = total_trades / total_days
 
-    return df, total_trades, trades_per_day
+    for name, sig_array in strategies.items():
+        pos = pd.Series(sig_array).shift(1).fillna(0) 
+        
+        trade_happened = pos.diff().fillna(0) != 0
+        fee_cost = np.where(trade_happened, fee_rate, 0)
+        
+        net_returns = (pos * df['market_returns']) - fee_cost
+        cum_returns = (1 + net_returns).cumprod()
+        
+        cum_max = cum_returns.cummax()
+        drawdown = (cum_returns - cum_max) / cum_max
+        
+        final_return = (cum_returns.iloc[-1] - 1) * 100
+        max_dd = drawdown.min() * 100
+        trades = trade_happened.sum()
+        
+        results.append({
+            "选手编号与流派": name,
+            "净收益(%)": final_return, 
+            "最大回撤(%)": f"{max_dd:.2f}%",
+            "交易次数": trades,
+            "日均交易": f"{trades / total_days:.1f}次"
+        })
+        
+    report_df = pd.DataFrame(results).sort_values(by="净收益(%)", ascending=False)
+    report_df["净收益(%)"] = report_df["净收益(%)"].apply(lambda x: f"{x:.2f}%")
+    
+    benchmark_return = ((1 + df['market_returns']).cumprod().iloc[-1] - 1) * 100
+    
+    return report_df, benchmark_return, df
 
 if __name__ == "__main__":
-    df = fetch_massive_5m_data()
+    df = fetch_safe_5m_data()
     
     if not df.empty:
-        res_df, total_trades, trades_per_day = run_high_frequency_strategy(df)
+        report_df, benchmark, raw_df = battle_royale_5m(df)
         
-        final_market = res_df['累计市场收益'].iloc[-1] * 100
-        final_gross = res_df['累计策略毛收益'].iloc[-1] * 100
-        final_net = res_df['累计策略净收益'].iloc[-1] * 100
+        print("\n" + "⚔️"*30)
+        print(f"🥊 5分钟高频死亡擂台 (10大门派) | 版本: {VERSION}")
+        print("⚔️"*30)
+        print(f"⏱️ 极限回测区间: {raw_df['timestamp'].iloc[0].strftime('%Y-%m-%d %H:%M')} 至 {raw_df['timestamp'].iloc[-1].strftime('%Y-%m-%d %H:%M')}")
+        print(f"📉 现货大盘基准收益: {benchmark:.2f}%")
+        print("-" * 60)
+        print(report_df.to_string(index=False))
+        print("⚔️"*30)
         
-        print("\n" + "⚔️"*25)
-        print(f"🌪️ 高频日内策略测评报告 (5m级别)")
-        print("⚔️"*25)
-        print(f"回测时间跨度: {res_df['timestamp'].iloc[0].strftime('%Y-%m-%d')} 至 {res_df['timestamp'].iloc[-1].strftime('%Y-%m-%d')}")
-        print(f"总交易次数:   {total_trades} 次")
-        print(f"平均每日交易: {trades_per_day:.1f} 次 (强制每日开仓达标！)")
-        print("-" * 50)
-        print(f"基准表现(死拿):     {final_market:>9.2f}%")
-        print(f"理想状态(不扣手续费): {final_gross:>9.2f}%")
-        print(f"现实结果(扣除手续费): {final_net:>9.2f}%")
-        print("⚔️"*25)
-        print("💡 终极思考：对比一下理想状态和现实结果的巨大落差，你现在感受到高频交易里手续费的恐怖了吗？")
-        
-        res_df.to_csv('report.csv', index=False)
+        raw_df.to_csv('report.csv', index=False)

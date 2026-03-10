@@ -16,18 +16,16 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: 安装依赖
         run: pip install -r requirements.txt
 
-      - name: Run backtest
-        run: python backtest.py > summary.txt
+      - name: 执行回测
+        run: python backtest.py > latest_summary.txt
 
-      - name: Upload artifacts
+      - name: 上传结果
         uses: actions/upload-artifact@v4
         with:
-          name: backtest-report
+          name: backtest-results
           path: |
-            summary.txt
-            summary.md
-            report.csv
-            equity_curves.csv
+            latest_summary.txt
+            outputs/**

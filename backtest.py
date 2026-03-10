@@ -1,34 +1,33 @@
-report, bench, equity_table = run_elite_tournament(df, fee_rate=0.0006, slippage=0.0002)
+name: 极简回测引擎
 
-console_report = report.rename(columns={
-    "选手流派": "Strategy",
-    "净收益(%)": "Return%",
-    "最大回撤(%)": "MaxDD%",
-    "Sharpe": "Sharpe",
-    "开仓次数": "Entries",
-    "反手次数": "Flip",
-    "持仓占比(%)": "Exposure%",
-    "胜率(%)": "WinRate%",
-    "盈亏比": "PnLRatio",
-}).copy()
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
-for col in ["Return%", "MaxDD%", "Exposure%", "WinRate%"]:
-    console_report[col] = console_report[col].map(lambda x: f"{x:.2f}%")
+jobs:
+  run-backtest:
+    runs-on: ubuntu-latest
 
-console_report["Sharpe"] = console_report["Sharpe"].map(lambda x: f"{x:.2f}")
-console_report["PnLRatio"] = console_report["PnLRatio"].map(lambda x: f"{x:.2f}")
+    steps:
+      - uses: actions/checkout@v4
 
-print(f"\n[{VERSION}] Top Strategies Backtest")
-print(f"Benchmark: {bench:.2f}%")
-print("-" * 120)
-print(console_report.to_string(index=False))
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-report.to_csv("report.csv", index=False, encoding="utf-8-sig")
-equity_table.to_csv("equity_curves.csv", index=False, encoding="utf-8-sig")
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-with open("summary.md", "w", encoding="utf-8-sig") as f:
-    f.write(f"# {VERSION} 回测结果\n\n")
-    f.write(f"- Benchmark: {bench:.2f}%\n\n")
-    f.write(report.to_markdown(index=False))
+      - name: Run backtest
+        run: python backtest.py > summary.txt
 
-print("\n已输出 report.csv、equity_curves.csv、summary.md")
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-report
+          path: |
+            summary.txt
+            summary.md
+            report.csv
+            equity_curves.csv

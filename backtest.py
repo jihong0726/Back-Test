@@ -2,9 +2,10 @@ import requests
 import pandas as pd
 import numpy as np
 
-def fetch_bitget_futures_data(symbol="BTCUSDT", interval="4H", limit=1000):
-    print(f"📡 正在拉取 Bitget {symbol} {interval} 级别永续合约数据...")
+def fetch_bitget_futures_data(symbol="BTCUSDT", interval="5m", limit=1000):
+    print(f"📡 正在拉取 Bitget {symbol} {interval} 级别永续合约数据 (约最近3.5天)...")
     url = "https://api.bitget.com/api/v2/mix/market/candles"
+    # 注意：Bitget 5分钟级别的参数是 '5m'
     params = {"symbol": symbol, "productType": "USDT-FUTURES", "granularity": interval, "limit": limit}
     try:
         response = requests.get(url, params=params)
@@ -25,48 +26,48 @@ def fetch_bitget_futures_data(symbol="BTCUSDT", interval="4H", limit=1000):
 
 def run_strategy(df):
     if df.empty: return df
-    print("🧠 开始计算 [均线趋势 + RSI动能] 复合策略，并扣除真实手续费...")
+    print("🧠 开始计算 [5m 专属：长效均线 + 严苛 RSI] 复合策略...")
 
-    # 1. 趋势指标：EMA
-    df['ema_20'] = df['close'].ewm(span=20, adjust=False).mean()
+    # 1. 换用更长周期的 EMA 抵抗 5 分钟级别的噪音
     df['ema_50'] = df['close'].ewm(span=50, adjust=False).mean()
+    df['ema_200'] = df['close'].ewm(span=200, adjust=False).mean()
 
-    # 2. 动能指标：RSI (参数 14)
+    # 2. RSI 动能指标 (参数 14)
     delta = df['close'].diff()
     gain = delta.where(delta > 0, 0).ewm(alpha=1/14, adjust=False).mean()
     loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, adjust=False).mean()
     rs = gain / loss
     df['rsi'] = 100 - (100 / (1 + rs))
 
-    # 3. 复合开仓信号 (强强联合)
-    long_cond = (df['ema_20'] > df['ema_50']) & (df['rsi'] > 50)
-    short_cond = (df['ema_20'] < df['ema_50']) & (df['rsi'] < 50)
+    # 3. 极度严苛的开仓条件 (必须趋势和动能双重确认)
+    long_cond = (df['ema_50'] > df['ema_200']) & (df['rsi'] > 55)
+    short_cond = (df['ema_50'] < df['ema_200']) & (df['rsi'] < 45)
 
     df['signal'] = 0
     df.loc[long_cond, 'signal'] = 1
     df.loc[short_cond, 'signal'] = -1
-
-    # 如果没有触发新信号，保持上一根 K 线的持仓状态
     df['signal'] = df['signal'].replace(0, np.nan).ffill().fillna(0)
 
-    # 避免未来函数作弊
     df['position'] = df['signal'].shift(1)
 
-    # 4. 引入真实世界的手续费 (Bitget Taker 费率约 0.06%)
+    # 4. 真实手续费 (Bitget Taker 费率约 0.06%)
     fee_rate = 0.0006
-    # 只要当前持仓和上一根K线不一样，说明发生了一笔交易
     df['trade_happened'] = df['position'].diff().fillna(0) != 0
     df['fee_cost'] = np.where(df['trade_happened'], fee_rate, 0)
 
-    # 5. 计算净收益 (市场涨跌幅 * 持仓方向 - 手续费)
+    # 5. 计算毛利与净利润 (直观对比手续费的恐怖)
     df['market_returns'] = df['close'].pct_change()
-    df['strategy_returns'] = (df['position'] * df['market_returns']) - df['fee_cost']
+    
+    # 策略毛收益 (没扣手续费)
+    df['gross_returns'] = df['position'] * df['market_returns']
+    # 策略净收益 (扣了手续费)
+    df['net_returns'] = df['gross_returns'] - df['fee_cost']
 
     df['累计市场收益'] = (1 + df['market_returns']).cumprod() - 1
-    df['累计策略收益'] = (1 + df['strategy_returns']).cumprod() - 1
+    df['累计策略净收益'] = (1 + df['net_returns']).cumprod() - 1
+    df['累计策略毛收益'] = (1 + df['gross_returns']).cumprod() - 1
 
-    # 6. 计算最大回撤 (评估风险)
-    df['累计资金曲线'] = (1 + df['strategy_returns']).cumprod()
+    df['累计资金曲线'] = (1 + df['net_returns']).cumprod()
     df['历史最高点'] = df['累计资金曲线'].cummax()
     df['回撤'] = (df['累计资金曲线'] - df['历史最高点']) / df['历史最高点']
     
@@ -78,15 +79,17 @@ if __name__ == "__main__":
 
     if not result_df.empty:
         final_market = result_df['累计市场收益'].iloc[-1] * 100
-        final_strategy = result_df['累计策略收益'].iloc[-1] * 100
+        final_net = result_df['累计策略净收益'].iloc[-1] * 100
+        final_gross = result_df['累计策略毛收益'].iloc[-1] * 100
         max_drawdown = result_df['回撤'].min() * 100
         trade_count = result_df['trade_happened'].sum()
 
         print("\n" + "="*50)
-        print("📊 优化版：[趋势+动能] 复合策略回测结果")
+        print("⚡ 5分钟级别高频回测结果 (最近 3.5 天)")
         print("="*50)
-        print(f"一直死拿现货的收益: {final_market:>8.2f}%")
-        print(f"优化策略的净收益:   {final_strategy:>8.2f}% (已扣除手续费)")
+        print(f"死拿现货的收益:     {final_market:>8.2f}%")
+        print(f"理想状态的毛收益:   {final_gross:>8.2f}% (如果交易所不收手续费)")
+        print(f"扣除手续费后净赚:   {final_net:>8.2f}% (现实结果)")
         print("-" * 50)
         print(f"最大回撤 (风险):    {max_drawdown:>8.2f}%")
         print(f"总交易次数:         {trade_count} 次")

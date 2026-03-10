@@ -33,7 +33,8 @@ jobs:
           pip install -r requirements.txt
 
       - name: 初始化项目与数据库配置
-        run: |
+        run: |  
+          jesse --help
           jesse make-project quant_bot
           cd quant_bot
           sed -i "s/'PASSWORD': 'password'/'PASSWORD': 'password@123'/g" config.py

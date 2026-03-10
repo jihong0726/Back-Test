@@ -3,23 +3,43 @@ import pandas as pd
 import numpy as np
 import time
 
-def fetch_1_year_bitget_data(symbol="BTCUSDT", interval="1H"):
-    print(f"📡 自动循环拉取 Bitget {symbol} {interval} 级别 1 年历史数据...")
+# ==========================================
+# ⚙️ 版本控制
+# ==========================================
+VERSION = "V4.0_High_Frequency_Daily_Trader"
+
+def fetch_massive_5m_data(symbol="BTCUSDT", interval="5m"):
+    print(f"[{VERSION}] 📡 正在挑战交易所极限：疯狂拉取 5分钟 历史数据...")
     url = "https://api.bitget.com/api/v2/mix/market/candles"
     end_time = str(int(time.time() * 1000))
-    one_year_ago = int((time.time() - 365 * 24 * 60 * 60) * 1000)
+    # 试图拉取 2 年前的数据
+    target_time = int((time.time() - 2 * 365 * 24 * 60 * 60) * 1000) 
     
     all_data = []
-    for i in range(12): 
+    # 2年5分钟线大约需要 210 次请求 (每次 1000 根)
+    # 我们设置最大循环 250 次，但如果交易所中途不给数据了，会自动停止
+    for i in range(250): 
         params = {"symbol": symbol, "productType": "USDT-FUTURES", "granularity": interval, "endTime": end_time, "limit": "1000"}
         try:
             res = requests.get(url, params=params).json()
             data = res.get("data", [])
-            if not data: break
+            
+            # 交易所 API 的隐藏墙：如果不给数据了，说明触及了历史深度限制
+            if not data:
+                print(f"⚠️ 交易所公共 API 历史深度触达极限！已无法获取更早的数据。")
+                break
+                
             all_data.extend(data)
-            end_time = data[-1][0] 
-            if int(end_time) < one_year_ago: break
-            time.sleep(0.2) 
+            end_time = data[-1][0]
+            
+            if int(end_time) < target_time: 
+                break
+                
+            # 打印进度条，安抚焦虑
+            if i % 10 == 0:
+                print(f"   已抓取 {len(all_data)} 根 K 线，当前追溯至: {pd.to_datetime(int(end_time), unit='ms').strftime('%Y-%m-%d')}")
+                
+            time.sleep(0.15) # 防止触发 429 Too Many Requests
         except Exception as e:
             print(f"抓取中断: {e}")
             break
@@ -27,84 +47,22 @@ def fetch_1_year_bitget_data(symbol="BTCUSDT", interval="1H"):
     df = pd.DataFrame(all_data, columns=['timestamp', 'open', 'high', 'low', 'close', 'base_vol', 'quote_vol'])
     df['timestamp'] = pd.to_numeric(df['timestamp'])
     df = df.sort_values('timestamp').reset_index(drop=True)
-    df = df[df['timestamp'] >= one_year_ago].copy()
     
-    for col in ['open', 'high', 'low', 'close']:
-        df[col] = df[col].astype(float)
+    for col in ['open', 'high', 'low', 'close']: df[col] = df[col].astype(float)
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+    
+    print(f"✅ 最终成功获取了 {len(df)} 根 5分钟 K线！起始时间: {df['timestamp'].iloc[0].strftime('%Y-%m-%d')}")
     return df
 
-def run_institutional_strategy(df):
-    print("🧠 正在组装【机构级三重滤网】复合指标...")
+def run_high_frequency_strategy(df):
+    if df.empty: return df
     
-    # 滤网 1：宏观大趋势 (EMA 200)
-    df['ema_200'] = df['close'].ewm(span=200, adjust=False).mean()
+    # 极度敏感的指标：EMA 5 和 EMA 15，保证每天频繁交叉
+    df['ema_5'] = df['close'].ewm(span=5, adjust=False).mean()
+    df['ema_15'] = df['close'].ewm(span=15, adjust=False).mean()
     
-    # 滤网 2：ATR 波动率 (用于剔除垃圾横盘时间)
-    df['tr0'] = abs(df['high'] - df['low'])
-    df['tr1'] = abs(df['high'] - df['close'].shift())
-    df['tr2'] = abs(df['low'] - df['close'].shift())
-    df['tr'] = df[['tr0', 'tr1', 'tr2']].max(axis=1)
-    df['atr'] = df['tr'].rolling(14).mean()
-    df['atr_sma'] = df['atr'].rolling(50).mean() # 衡量当前波动率是否大于历史平均
-    
-    # 滤网 3：微观动能 (RSI 14 + MACD)
-    delta = df['close'].diff()
-    gain = delta.where(delta > 0, 0).ewm(alpha=1/14, adjust=False).mean()
-    loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, adjust=False).mean()
-    rs = gain / loss
-    df['rsi'] = 100 - (100 / (1 + rs))
-    
-    exp1 = df['close'].ewm(span=12, adjust=False).mean()
-    exp2 = df['close'].ewm(span=26, adjust=False).mean()
-    df['macd'] = exp1 - exp2
-    df['signal_line'] = df['macd'].ewm(span=9, adjust=False).mean()
-    df['macd_hist'] = df['macd'] - df['signal_line']
-
-    # 🎯 终极开仓逻辑：四因子共振
-    df['signal'] = 0
-    
-    # 【做多条件】：大趋势向上 + 波动率够大 + RSI 回调到低位 + MACD动能柱开始反转向上
-    long_cond = (
-        (df['close'] > df['ema_200']) & 
-        (df['atr'] > df['atr_sma']) & 
-        (df['rsi'] < 45) & 
-        (df['macd_hist'] > df['macd_hist'].shift(1))
-    )
-    
-    # 【做空条件】：大趋势向下 + 波动率够大 + RSI 反抽到高位 + MACD动能柱开始反转向下
-    short_cond = (
-        (df['close'] < df['ema_200']) & 
-        (df['atr'] > df['atr_sma']) & 
-        (df['rsi'] > 55) & 
-        (df['macd_hist'] < df['macd_hist'].shift(1))
-    )
-    
-    # 🚀 出场逻辑 (平仓)：当 RSI 冲到极端超买超卖区，或者跌破均线时止盈出局
-    exit_long = (df['rsi'] > 70) | (df['close'] < df['ema_200'])
-    exit_short = (df['rsi'] < 30) | (df['close'] > df['ema_200'])
-
-    # 状态机映射
-    df.loc[long_cond, 'signal'] = 1
-    df.loc[short_cond, 'signal'] = -1
-    
-    # 复杂的持仓状态推导（带有明确平仓逻辑）
-    positions = []
-    current_pos = 0
-    for i in range(len(df)):
-        if current_pos == 0:
-            if long_cond.iloc[i]: current_pos = 1
-            elif short_cond.iloc[i]: current_pos = -1
-        elif current_pos == 1:
-            if exit_long.iloc[i]: current_pos = 0
-            elif short_cond.iloc[i]: current_pos = -1 # 直接反手
-        elif current_pos == -1:
-            if exit_short.iloc[i]: current_pos = 0
-            elif long_cond.iloc[i]: current_pos = 1 # 直接反手
-        positions.append(current_pos)
-        
-    df['position'] = positions
-    df['position'] = df['position'].shift(1).fillna(0) # 避免未来函数
+    df['signal'] = np.where(df['ema_5'] > df['ema_15'], 1, -1)
+    df['position'] = df['signal'].shift(1).fillna(0)
 
     # 计算真实利润与 0.06% 手续费摩擦
     fee_rate = 0.0006
@@ -112,34 +70,42 @@ def run_institutional_strategy(df):
     df['trade_happened'] = df['position'].diff().fillna(0) != 0
     df['fee_cost'] = np.where(df['trade_happened'], fee_rate, 0)
     
-    df['strategy_returns'] = (df['position'] * df['market_returns']) - df['fee_cost']
+    df['gross_returns'] = df['position'] * df['market_returns']
+    df['net_returns'] = df['gross_returns'] - df['fee_cost']
+    
     df['累计市场收益'] = (1 + df['market_returns']).cumprod() - 1
-    df['累计策略收益'] = (1 + df['strategy_returns']).cumprod() - 1
+    df['累计策略毛收益'] = (1 + df['gross_returns']).cumprod() - 1
+    df['累计策略净收益'] = (1 + df['net_returns']).cumprod() - 1
     
-    df['累计资金曲线'] = (1 + df['strategy_returns']).cumprod()
-    df['回撤'] = (df['累计资金曲线'] - df['累计资金曲线'].cummax()) / df['累计资金曲线'].cummax()
-    
-    return df
+    # 计算日均交易次数，验证是否达标
+    total_days = (df['timestamp'].iloc[-1] - df['timestamp'].iloc[0]).days
+    total_days = total_days if total_days > 0 else 1
+    total_trades = df['trade_happened'].sum()
+    trades_per_day = total_trades / total_days
+
+    return df, total_trades, trades_per_day
 
 if __name__ == "__main__":
-    df = fetch_1_year_bitget_data()
+    df = fetch_massive_5m_data()
     
     if not df.empty:
-        res = run_institutional_strategy(df)
+        res_df, total_trades, trades_per_day = run_high_frequency_strategy(df)
         
-        final_market = res['累计市场收益'].iloc[-1] * 100
-        final_strategy = res['累计策略收益'].iloc[-1] * 100
-        max_dd = res['回撤'].min() * 100
-        trades = res['trade_happened'].sum()
+        final_market = res_df['累计市场收益'].iloc[-1] * 100
+        final_gross = res_df['累计策略毛收益'].iloc[-1] * 100
+        final_net = res_df['累计策略净收益'].iloc[-1] * 100
         
-        print("\n" + "★"*60)
-        print("🏛️ 专业级：【三重滤网大周期回调策略】1 年期回测报告")
-        print("★"*60)
-        print(f"死拿现货收益:   {final_market:>8.2f}%")
-        print(f"本策略净收益:   {final_strategy:>8.2f}% (已扣除真实手续费)")
-        print("-" * 60)
-        print(f"极限最大回撤:   {max_dd:>8.2f}%")
-        print(f"全年交易次数:   {trades} 次 (极度克制)")
-        print(f"胜率/盈亏比:    通过出场逻辑动态锁定利润")
-        print("★"*60)
-        res.to_csv('report.csv', index=False)
+        print("\n" + "⚔️"*25)
+        print(f"🌪️ 高频日内策略测评报告 (5m级别)")
+        print("⚔️"*25)
+        print(f"回测时间跨度: {res_df['timestamp'].iloc[0].strftime('%Y-%m-%d')} 至 {res_df['timestamp'].iloc[-1].strftime('%Y-%m-%d')}")
+        print(f"总交易次数:   {total_trades} 次")
+        print(f"平均每日交易: {trades_per_day:.1f} 次 (强制每日开仓达标！)")
+        print("-" * 50)
+        print(f"基准表现(死拿):     {final_market:>9.2f}%")
+        print(f"理想状态(不扣手续费): {final_gross:>9.2f}%")
+        print(f"现实结果(扣除手续费): {final_net:>9.2f}%")
+        print("⚔️"*25)
+        print("💡 终极思考：对比一下理想状态和现实结果的巨大落差，你现在感受到高频交易里手续费的恐怖了吗？")
+        
+        res_df.to_csv('report.csv', index=False)

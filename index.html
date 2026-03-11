@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backtest Dashboard</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121933;
+      --panel-2: #182246;
+      --text: #eaf0ff;
+      --muted: #95a2c6;
+      --good: #2ecc71;
+      --bad: #ff6b6b;
+      --line: #2a3768;
+      --accent: #6ea8fe;
+      --warn: #f7b731;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #08101f 0%, #0c1530 100%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0.3px;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { border-color: var(--accent); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+    .card {
+      background: rgba(18, 25, 51, 0.95);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .card h2 {
+      margin: 0 0 12px 0;
+      font-size: 17px;
+    }
+    .span-12 { grid-column: span 12; }
+    .span-8 { grid-column: span 8; }
+    .span-6 { grid-column: span 6; }
+    .span-4 { grid-column: span 4; }
+    .span-3 { grid-column: span 3; }
+    @media (max-width: 980px) {
+      .span-8,.span-6,.span-4,.span-3 { grid-column: span 12; }
+    }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 980px) {
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+    }
+    .kpi {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .kpi .label { color: var(--muted); font-size: 12px; }
+    .kpi .value { font-size: 24px; font-weight: 800; margin-top: 6px; }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+    .muted { color: var(--muted); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      white-space: nowrap;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--line);
+      background: #111937;
+    }
+    .tag.range { color: var(--warn); }
+    .tag.trend { color: var(--accent); }
+    .signal-list {
+      display: grid;
+      gap: 12px;
+    }
+    .signal {
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .signal .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .signal .sym {
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .signal .meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    .signal .nums {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .signal .box {
+      background: #111937;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .signal .box .t { color: var(--muted); font-size: 12px; }
+    .signal .box .v { margin-top: 6px; font-weight: 800; }
+    .empty {
+      color: var(--muted);
+      padding: 18px;
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+      text-align: center;
+    }
+    .footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>Backtest Dashboard</h1>
+        <div class="sub" id="lastUpdated">正在读取数据...</div>
+      </div>
+      <div class="actions">
+        <button onclick="loadDashboard()">刷新数据</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card span-12">
+        <h2>总览</h2>
+        <div class="kpis" id="kpis"></div>
+      </div>
+
+      <div class="card span-8">
+        <h2>策略排行榜</h2>
+        <div id="strategyTable"></div>
+      </div>
+
+      <div class="card span-4">
+        <h2>市场状态</h2>
+        <div id="marketStates"></div>
+      </div>
+
+      <div class="card span-12">
+        <h2>当前交易信号</h2>
+        <div id="signalList"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      建议把 Python 输出改成 docs/data/latest.json，然后这个页面直接 fetch 该 JSON。这样 GitHub Pages 打开就是实时结果，不需要每次下载 artifact。
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_DATA = {
+      meta: {
+        version: 'V9.3',
+        generated_at: new Date().toISOString(),
+        symbol_count: 0,
+        strategy_count: 0,
+        best_strategy: '-',
+      },
+      leaderboard: [],
+      market_states: [],
+      signals: []
+    };
+
+    function pct(v) {
+      if (v === null || v === undefined || Number.isNaN(Number(v))) return '-';
+      return `${Number(v).toFixed(2)}%`;
+    }
+
+    function num(v, d = 2) {
+      if (v === null || v === undefined || Number.isNaN(Number(v))) return '-';
+      return Number(v).toFixed(d);
+    }
+
+    function sideClass(side) {
+      return side === 'LONG' ? 'good' : side === 'SHORT' ? 'bad' : '';
+    }
+
+    function renderKpis(data) {
+      const m = data.meta || {};
+      const cards = [
+        { label: '版本', value: m.version || '-' },
+        { label: '币对数量', value: m.symbol_count ?? '-' },
+        { label: '策略数量', value: m.strategy_count ?? '-' },
+        { label: '当前最优策略', value: m.best_strategy || '-' },
+      ];
+      document.getElementById('kpis').innerHTML = cards.map(c => `
+        <div class="kpi">
+          <div class="label">${c.label}</div>
+          <div class="value">${c.value}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderStrategyTable(data) {
+      const rows = data.leaderboard || [];
+      if (!rows.length) {
+        document.getElementById('strategyTable').innerHTML = '<div class="empty">暂无策略结果</div>';
+        return;
+      }
+      const html = `
+        <table>
+          <thead>
+            <tr>
+              <th>排名</th>
+              <th>策略</th>
+              <th>币对</th>
+              <th>市场</th>
+              <th>收益</th>
+              <th>回撤</th>
+              <th>Sharpe</th>
+              <th>交易次数</th>
+              <th>胜率</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((r, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${r.strategy ?? '-'}</td>
+                <td>${r.symbol ?? '-'}</td>
+                <td>${r.market ?? '-'}</td>
+                <td class="${Number(r.return) >= 0 ? 'good' : 'bad'}">${pct(r.return)}</td>
+                <td class="${Number(r.max_dd) >= -5 ? 'good' : 'bad'}">${pct(r.max_dd)}</td>
+                <td>${num(r.sharpe)}</td>
+                <td>${r.trades ?? '-'}</td>
+                <td>${pct((Number(r.win_rate) || 0) * 100)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      document.getElementById('strategyTable').innerHTML = html;
+    }
+
+    function renderMarketStates(data) {
+      const rows = data.market_states || [];
+      if (!rows.length) {
+        document.getElementById('marketStates').innerHTML = '<div class="empty">暂无市场状态</div>';
+        return;
+      }
+      document.getElementById('marketStates').innerHTML = rows.map(r => `
+        <div class="signal" style="margin-bottom:10px;">
+          <div class="row">
+            <div class="sym">${r.symbol}</div>
+            <div class="tag ${String(r.market || '').startsWith('TREND') ? 'trend' : 'range'}">${r.market || '-'}</div>
+          </div>
+          <div class="meta">价格 ${num(r.close, 4)} · RSI ${num(r.rsi, 2)} · VWAP偏离 ${pct((Number(r.vwap_dev) || 0) * 100)}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderSignals(data) {
+      const rows = data.signals || [];
+      if (!rows.length) {
+        document.getElementById('signalList').innerHTML = '<div class="empty">当前没有满足条件的交易信号</div>';
+        return;
+      }
+      document.getElementById('signalList').innerHTML = `
+        <div class="signal-list">
+          ${rows.map(s => `
+            <div class="signal">
+              <div class="row">
+                <div>
+                  <div class="sym">${s.symbol}</div>
+                  <div class="meta">${s.market || '-'} · ${s.strategy || '-'} · <span class="${sideClass(s.action)}">${s.action || '-'}</span></div>
+                </div>
+                <div class="tag ${String(s.market || '').startsWith('TREND') ? 'trend' : 'range'}">${s.market || '-'}</div>
+              </div>
+              <div class="nums">
+                <div class="box"><div class="t">Entry</div><div class="v">${num(s.entry, 4)}</div></div>
+                <div class="box"><div class="t">TP</div><div class="v good">${num(s.tp, 4)}</div></div>
+                <div class="box"><div class="t">SL</div><div class="v bad">${num(s.sl, 4)}</div></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch('./data/latest.json?_=' + Date.now());
+        if (!res.ok) throw new Error('无法读取 latest.json');
+        const data = await res.json();
+        renderAll(data);
+      } catch (err) {
+        console.error(err);
+        renderAll(DEFAULT_DATA);
+        document.getElementById('lastUpdated').textContent = '读取失败：请先让 Python 输出 docs/data/latest.json';
+      }
+    }
+
+    function renderAll(data) {
+      renderKpis(data);
+      renderStrategyTable(data);
+      renderMarketStates(data);
+      renderSignals(data);
+      const t = data.meta?.generated_at || new Date().toISOString();
+      document.getElementById('lastUpdated').textContent = `最后更新：${t}`;
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

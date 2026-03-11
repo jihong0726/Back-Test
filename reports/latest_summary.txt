@@ -1,31 +1,31 @@
 Version: V12_PAPER_TRADING_ENGINE
-Generated At: 2026-03-11 21:23:01
+Generated At: 2026-03-11 22:14:38
 
 === ACCOUNT ===
- initial_balance  cash_balance   equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   9652.249001 9652.249    12125.941    -2473.692   -233.676751             0.0      5.494183  168.656366 2026-03-11 21:23:01
+ initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
+         10000.0   9651.036407 9744.6306    12125.941   -2381.3104   -233.676751         93.5942      6.706777  168.656366 2026-03-11 22:14:38
 
 === MARKET STATES ===
-  symbol   market      close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT    RANGE 70250.0000 99.7547        2.2309       1.0604 100.00
- ETHUSDT    RANGE  2045.2000 93.5249        2.1810       0.9080 100.00
- SOLUSDT    RANGE    86.3100 98.5330        1.8129       1.1709 100.00
- XRPUSDT    RANGE     1.3968 94.7977        1.6950       0.9661  99.22
-DOGEUSDT TREND_UP        NaN 87.5000        2.0668       1.0780   0.00
- BNBUSDT    RANGE   646.6600 97.7346        2.4804       0.8009 100.00
- ADAUSDT TREND_UP        NaN 74.5455        2.4106       1.1454   0.00
-AVAXUSDT    RANGE     9.7080 97.1223        4.9129       1.0084 100.00
-LINKUSDT    RANGE     9.0470 95.9184        2.2487       0.8554 100.00
- LTCUSDT    RANGE    54.5700 92.3077        1.5184       0.7863  95.49
- APTUSDT TREND_UP        NaN 80.0000        0.8306       1.0652   0.00
- SUIUSDT TREND_UP        NaN 91.2088        4.8483       1.4951   0.00
- ARBUSDT TREND_UP        NaN 72.2222        3.1002       1.0624   0.00
-  OPUSDT TREND_UP        NaN 63.6364        1.8927       0.7057   0.00
-ATOMUSDT    RANGE     1.8322 76.8817        3.2022       0.5671  97.40
-NEARUSDT TREND_UP        NaN 63.0363        4.4912       0.7372   0.00
- DOTUSDT TREND_UP        NaN 68.4211        3.8335       1.1073   0.00
- FILUSDT TREND_UP        NaN 66.6667       -2.7690       0.6688   0.00
- INJUSDT TREND_UP        NaN 97.6744        3.5258       1.1890   0.00
+  symbol   market   close    rsi7  vwap_dev_pct  ema_dev_pct  score
+ BTCUSDT TREND_UP     NaN 24.9145        1.9623       0.1620   0.00
+ ETHUSDT TREND_UP     NaN 23.4633        2.2729       0.1940   0.00
+ SOLUSDT TREND_UP     NaN 21.8514        1.4021       0.1552   0.00
+ XRPUSDT TREND_UP 1.39000 20.3704        1.1620      -0.0206  78.55
+DOGEUSDT TREND_UP 0.09302 16.4000        1.3479      -0.0545  85.55
+ BNBUSDT TREND_UP     NaN 23.7462        2.3574       0.1679   0.00
+ ADAUSDT TREND_UP     NaN 29.4118        2.2884       0.3737   0.00
+AVAXUSDT TREND_UP 9.68100 16.4609        4.5017      -0.0059  95.04
+LINKUSDT TREND_UP     NaN 33.2075        2.3464       0.3429   0.00
+ LTCUSDT TREND_UP     NaN 36.5385        1.6952       0.3852   0.00
+ APTUSDT TREND_UP     NaN 27.9863        0.6920       0.2208   0.00
+ SUIUSDT TREND_UP     NaN 26.8707        4.4822       0.4571   0.00
+ ARBUSDT TREND_UP     NaN 32.6531        3.1221       0.2405   0.00
+  OPUSDT TREND_UP     NaN 35.1351        1.8736       0.2795   0.00
+ATOMUSDT    RANGE     NaN 36.1111        2.9128       0.1347   0.00
+NEARUSDT TREND_UP     NaN 32.8076        4.4192       0.2599   0.00
+ DOTUSDT TREND_UP     NaN 32.5581        3.3219       0.3007   0.00
+ FILUSDT TREND_UP     NaN 37.6984       -2.9233       0.2993   0.00
+ INJUSDT TREND_UP     NaN 29.0698        3.1000       0.2166   0.00
 
 === OPEN POSITIONS ===
   symbol  side strategy     entry           tp           sl    margin  notional  leverage  size           opened_at
@@ -36,24 +36,14 @@ AVAXUSDT SHORT VWAP_2.5     9.708     9.253388     9.741000 2425.1882 12125.941 
  SOLUSDT SHORT VWAP_1.5    86.310    84.773131    86.636714 2425.1882 12125.941       5.0   1.0 2026-03-11 21:23:01
 
 === POSITION DECISIONS ===
-               time    symbol     type  action                                                                                                                                                                            reason  current_price  pnl_pct   pnl_usd   market strategy  side      entry           tp           sl    margin  notional  leverage
-2026-03-11 21:22:57 MATICUSDT   SYSTEM   ERROR 400 Client Error: Bad Request for url: https://api.bitget.com/api/v2/mix/market/candles?symbol=MATICUSDT&productType=USDT-FUTURES&granularity=5m&limit=1000&endTime=1773235377336            NaN      NaN       NaN      NaN      NaN   NaN        NaN          NaN          NaN       NaN       NaN       NaN
-2026-03-11 21:23:01   ACCOUNT  ACCOUNT FUNDING                                                                                                                                                                   本轮收取资金费 1.0029U            NaN      NaN       NaN      NaN      NaN   NaN        NaN          NaN          NaN       NaN       NaN       NaN
-2026-03-11 21:23:01  AVAXUSDT POSITION   CLOSE                                                                                                                                                                              触发止损         9.7080  -1.3906 -185.5660    RANGE VWAP_2.5 SHORT     9.5730     9.244505     9.557588       NaN       NaN       NaN
-2026-03-11 21:23:01   APTUSDT POSITION   CLOSE                                                                                                                                                                              触发止盈         0.9626   2.4152  292.7028 TREND_UP VWAP_1.5  LONG     0.9399     0.956647     0.939900       NaN       NaN       NaN
-2026-03-11 21:23:01  ATOMUSDT POSITION   CLOSE                                                                                                                                                                              触发止损         1.8322  -0.9551 -130.0451    RANGE VWAP_2.0 SHORT     1.8147     1.774824     1.812629       NaN       NaN       NaN
-2026-03-11 21:23:01  NEARUSDT POSITION   CLOSE                                                                                                                                                                              触发止损         1.3063  -1.5770   -4.2321 TREND_UP VWAP_2.5 SHORT     1.2857     1.248946     1.289279       NaN       NaN       NaN
-2026-03-11 21:23:01   BNBUSDT POSITION   CLOSE                                                                                                                                                                              触发止损       646.6600  -0.7206 -100.3476    RANGE VWAP_1.5 SHORT   642.0000   630.806570   638.461495       NaN       NaN       NaN
-2026-03-11 21:23:01   BTCUSDT    ENTRY    OPEN                                                                                                                                                      震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归     70250.0000   0.0000    0.0000    RANGE VWAP_2.0 SHORT 70250.0000 68717.008981 70469.078571 2425.1882 12125.941       5.0
-2026-03-11 21:23:01   ETHUSDT    ENTRY    OPEN                                                                                                                                                      震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归      2045.2000   0.0000    0.0000    RANGE VWAP_2.0 SHORT  2045.2000  2001.546103  2051.880000 2425.1882 12125.941       5.0
-2026-03-11 21:23:01   SOLUSDT    ENTRY    OPEN                                                                                                                                                       震荡市场中价格高于 VWAP 1.5%，轻仓做空等回归        86.3100   0.0000    0.0000    RANGE VWAP_1.5 SHORT    86.3100    84.773131    86.636714 2425.1882 12125.941       5.0
-2026-03-11 21:23:01   BNBUSDT    ENTRY    OPEN                                                                                                                                                      震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归       646.6600   0.0000    0.0000    RANGE VWAP_2.0 SHORT   646.6600   631.008605   648.088571 2425.1882 12125.941       5.0
-2026-03-11 21:23:01  AVAXUSDT    ENTRY    OPEN                                                                                                                                                   震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归         9.7080   0.0000    0.0000    RANGE VWAP_2.5 SHORT     9.7080     9.253388     9.741000 2425.1882 12125.941       5.0
+               time    symbol     type  action                                                                                                                                                                            reason  current_price  pnl_pct  pnl_usd   market strategy  side     entry           tp           sl
+2026-03-11 22:14:32 MATICUSDT   SYSTEM   ERROR 400 Client Error: Bad Request for url: https://api.bitget.com/api/v2/mix/market/candles?symbol=MATICUSDT&productType=USDT-FUTURES&granularity=5m&limit=1000&endTime=1773238472510            NaN      NaN      NaN      NaN      NaN   NaN       NaN          NaN          NaN
+2026-03-11 22:14:38   ACCOUNT  ACCOUNT FUNDING                                                                                                                                                                   本轮收取资金费 1.2126U            NaN      NaN      NaN      NaN      NaN   NaN       NaN          NaN          NaN
+2026-03-11 22:14:38  AVAXUSDT POSITION    HOLD                                                                                                                                                                        结构未失效，继续持有          9.681   0.2789  33.7248 TREND_UP VWAP_2.5 SHORT     9.708     9.253388     9.741000
+2026-03-11 22:14:38   BNBUSDT POSITION    HOLD                                                                                                                                                                        结构未失效，继续持有        646.200   0.0712   8.6258 TREND_UP VWAP_2.0 SHORT   646.660   631.008605   648.088571
+2026-03-11 22:14:38   BTCUSDT POSITION    HOLD                                                                                                                                                                        结构未失效，继续持有      70110.000   0.1997  24.1656 TREND_UP VWAP_2.0 SHORT 70250.000 68717.008981 70469.078571
+2026-03-11 22:14:38   ETHUSDT POSITION    HOLD                                                                                                                                                                        结构未失效，继续持有       2048.500  -0.1611 -19.5656 TREND_UP VWAP_2.0 SHORT  2045.200  2001.546103  2051.880000
+2026-03-11 22:14:38   SOLUSDT POSITION    HOLD                                                                                                                                                                        结构未失效，继续持有         85.978   0.3861  46.6436 TREND_UP VWAP_1.5 SHORT    86.310    84.773131    86.636714
 
 === NEW ENTRY SIGNALS ===
-  symbol market strategy action     entry           tp           sl  score                          reason    margin  notional  leverage  risk_amount  open_fee
- BTCUSDT  RANGE VWAP_2.0  SHORT 70250.000 68717.008981 70469.078571    100    震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归 2425.1882 12125.941       5.0      97.0075    9.7008
- ETHUSDT  RANGE VWAP_2.0  SHORT  2045.200  2001.546103  2051.880000    100    震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归 2425.1882 12125.941       5.0      97.0075    9.7008
- SOLUSDT  RANGE VWAP_1.5  SHORT    86.310    84.773131    86.636714    100     震荡市场中价格高于 VWAP 1.5%，轻仓做空等回归 2425.1882 12125.941       5.0      97.0075    9.7008
- BNBUSDT  RANGE VWAP_2.0  SHORT   646.660   631.008605   648.088571    100    震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归 2425.1882 12125.941       5.0      97.0075    9.7008
-AVAXUSDT  RANGE VWAP_2.5  SHORT     9.708     9.253388     9.741000    100 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 2425.1882 12125.941       5.0      97.0075    9.7008
+No new entry signals.

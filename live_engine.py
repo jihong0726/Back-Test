@@ -27,8 +27,7 @@ CONFIG = {
     "fee_rate": 0.0006,
     "slippage_rate": 0.0002,
 
-    # 模拟资金费：每次引擎运行时，按名义仓位收取一个很小的近似值
-    # 后续你要接真实 funding rate 再换
+    # 简化资金费模型：每次引擎运行按名义仓位收取微小费用
     "funding_rate_per_cycle": 0.00002,
 
     # 风险参数
@@ -38,7 +37,7 @@ CONFIG = {
         "standard": 0.01,       # 1%
         "aggressive": 0.02      # 2%
     },
-    "max_margin_ratio": 0.25,   # 单笔最多使用账户净值 25% 作为保证金
+    "max_margin_ratio": 0.25,   # 单笔最多使用净值 25% 作为保证金
     "default_leverage": 5,
 
     # 止盈止损
@@ -70,9 +69,36 @@ def ensure_dirs():
     os.makedirs(REPORT_DIR, exist_ok=True)
 
 
-def local_now_str() -> str:
+def get_local_now():
     tz = timezone(timedelta(hours=8))
-    return datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S UTC+8")
+    return datetime.now(tz)
+
+
+def local_now_str() -> str:
+    return get_local_now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_next_run_info():
+    now = get_local_now()
+
+    minute = now.minute
+    next_minute = ((minute // 5) + 1) * 5
+
+    if next_minute >= 60:
+        next_run = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+    else:
+        next_run = now.replace(minute=next_minute, second=0, microsecond=0)
+
+    delta = next_run - now
+    minutes_left = int(delta.total_seconds() // 60)
+    seconds_left = int(delta.total_seconds() % 60)
+
+    return {
+        "now": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "next_run": next_run.strftime("%Y-%m-%d %H:%M:%S"),
+        "minutes_left": minutes_left,
+        "seconds_left": seconds_left
+    }
 
 
 def side_symbol(side: str) -> str:
@@ -137,6 +163,8 @@ def load_account() -> dict:
     data = load_json_file(ACCOUNT_PATH, default_account())
     if not isinstance(data, dict):
         return default_account()
+    if not data:
+        return default_account()
     return data
 
 
@@ -182,9 +210,13 @@ def send_telegram_message(text: str):
 
 
 def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: list[dict], open_positions: dict):
+    run_info = get_next_run_info()
+
     lines = []
     lines.append("📊 模拟交易引擎 V12")
-    lines.append(f"时间：{local_now_str()}")
+    lines.append(f"当前时间：{run_info['now']}")
+    lines.append(f"下一次建议时间：{run_info['next_run']}")
+    lines.append(f"距离下一次建议：约 {run_info['minutes_left']} 分 {run_info['seconds_left']} 秒")
     lines.append("")
 
     lines.append("账户概况")
@@ -198,13 +230,38 @@ def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: l
     lines.append(f"资金费：{account['funding_paid']:.2f}U")
     lines.append("")
 
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("📌 当前仓位信息")
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("")
+
+    open_rows = []
+    for symbol, pos in open_positions.items():
+        if pos.get("status") == "OPEN":
+            open_rows.append(pos)
+
+    if open_rows:
+        for pos in open_rows[:10]:
+            lines.append(f"{pos['symbol']}  {side_symbol(pos.get('side'))}")
+            lines.append(f"策略：{pos.get('strategy', '-')}")
+            lines.append(f"入场：{pos.get('entry')}")
+            lines.append(f"止盈：{pos.get('tp')}")
+            lines.append(f"止损：{pos.get('sl')}")
+            lines.append(f"杠杆：{pos.get('leverage', '-')}x")
+            lines.append(f"保证金：{float(pos.get('margin', 0) or 0):.2f}U")
+            lines.append(f"名义仓位：{float(pos.get('notional', 0) or 0):.2f}U")
+            lines.append("")
+    else:
+        lines.append("目前没有持仓")
+        lines.append("")
+
     entry_rows = [x for x in decision_rows if x.get("type") == "ENTRY" and x.get("action") == "OPEN"]
     close_rows = [x for x in decision_rows if x.get("type") == "POSITION" and x.get("action") == "CLOSE"]
     manage_rows = [x for x in decision_rows if x.get("type") == "POSITION" and x.get("action") in ("MOVE_SL", "PARTIAL_TP")]
 
     if entry_rows:
         lines.append("━━━━━━━━━━━━━━")
-        lines.append("🟢 新开仓")
+        lines.append("🟢 本轮新开仓")
         lines.append("━━━━━━━━━━━━━━")
         lines.append("")
         for r in entry_rows[:5]:
@@ -218,15 +275,17 @@ def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: l
                 lines.append(f"止盈：{r['tp']}")
             if r.get("sl") is not None:
                 lines.append(f"止损：{r['sl']}")
+            if r.get("leverage") is not None:
+                lines.append(f"杠杆：{r['leverage']}x")
             if r.get("margin") is not None:
-                lines.append(f"保证金：{r['margin']:.2f}U")
+                lines.append(f"保证金：{float(r['margin']):.2f}U")
             if r.get("notional") is not None:
-                lines.append(f"名义仓位：{r['notional']:.2f}U")
+                lines.append(f"名义仓位：{float(r['notional']):.2f}U")
             lines.append("")
 
     if manage_rows:
         lines.append("━━━━━━━━━━━━━━")
-        lines.append("⚙️ 持仓调整")
+        lines.append("⚙️ 本轮持仓调整")
         lines.append("━━━━━━━━━━━━━━")
         lines.append("")
         for r in manage_rows[:5]:
@@ -243,7 +302,7 @@ def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: l
 
     if close_rows:
         lines.append("━━━━━━━━━━━━━━")
-        lines.append("❌ 已平仓")
+        lines.append("❌ 本轮已平仓")
         lines.append("━━━━━━━━━━━━━━")
         lines.append("")
         for r in close_rows[:5]:
@@ -255,27 +314,8 @@ def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: l
             lines.append(f"盈亏：{pnl_usd:.2f}U")
             lines.append("")
 
-    open_rows = []
-    for symbol, pos in open_positions.items():
-        if pos.get("status") == "OPEN":
-            open_rows.append(pos)
-
-    if open_rows:
-        lines.append("━━━━━━━━━━━━━━")
-        lines.append("📌 当前持仓")
-        lines.append("━━━━━━━━━━━━━━")
-        lines.append("")
-        for pos in open_rows[:10]:
-            lines.append(f"{pos['symbol']}  {side_symbol(pos.get('side'))}")
-            lines.append(f"入场 {pos.get('entry')}")
-            lines.append(f"止盈 {pos.get('tp')}")
-            lines.append(f"止损 {pos.get('sl')}")
-            lines.append(f"保证金 {pos.get('margin', 0):.2f}U")
-            lines.append(f"名义仓位 {pos.get('notional', 0):.2f}U")
-            lines.append("")
-
     if not entry_rows and not manage_rows and not close_rows:
-        lines.append("当前没有新的重要变化")
+        lines.append("本轮没有新的交易变化")
 
     return "\n".join(lines)
 
@@ -636,7 +676,11 @@ def compute_position_size(account: dict, entry: float, sl: float):
     }
 
 
-def calculate_unrealized_pnl(side: str, entry: float, current: float, notional: float):
+def calculate_unrealized_pnl(side: str, entry: float, current: float, notional: float | None):
+    notional = float(notional or 0)
+    if notional <= 0:
+        return 0.0
+
     qty = notional / max(entry, 1e-9)
     if side == "LONG":
         return (current - entry) * qty
@@ -654,12 +698,13 @@ def update_account_snapshot(account: dict, positions: dict, latest_market: dict)
             continue
 
         current = float(latest_market[symbol]["df"].iloc[-1]["close"])
-        entry = float(pos["entry"])
-        notional = float(pos["notional"])
-        side = pos["side"]
+        entry = float(pos.get("entry", 0))
+        notional = float(pos.get("notional", 0) or 0)
+        margin = float(pos.get("margin", 0) or 0)
+        side = pos.get("side", "")
 
         unrealized += calculate_unrealized_pnl(side, entry, current, notional)
-        used_margin += float(pos["margin"])
+        used_margin += margin
 
     account["used_margin"] = safe_round(used_margin, 4)
     account["unrealized_pnl"] = safe_round(unrealized, 4)
@@ -681,7 +726,7 @@ def apply_funding(account: dict, positions: dict):
     for _, pos in positions.items():
         if pos.get("status") != "OPEN":
             continue
-        notional = float(pos.get("notional", 0))
+        notional = float(pos.get("notional", 0) or 0)
         fee = notional * funding_rate
         account["cash_balance"] -= fee
         account["funding_paid"] += fee
@@ -700,22 +745,26 @@ def current_pnl_pct(side: str, entry: float, current: float) -> float:
 
 
 def close_position(account: dict, pos: dict, current: float, reason: str):
-    side = pos["side"]
-    entry = float(pos["entry"])
-    notional = float(pos["notional"])
-    qty = notional / max(entry, 1e-9)
+    side = pos.get("side", "")
+    entry = float(pos.get("entry", 0) or 0)
+    notional = float(pos.get("notional", 0) or 0)
 
-    if side == "LONG":
-        pnl = (current - entry) * qty
+    if entry <= 0 or notional <= 0:
+        pnl_after_fee = 0.0
     else:
-        pnl = (entry - current) * qty
+        qty = notional / max(entry, 1e-9)
 
-    close_fee = notional * float(CONFIG["fee_rate"] + CONFIG["slippage_rate"])
-    pnl_after_fee = pnl - close_fee
+        if side == "LONG":
+            pnl = (current - entry) * qty
+        else:
+            pnl = (entry - current) * qty
+
+        close_fee = notional * float(CONFIG["fee_rate"] + CONFIG["slippage_rate"])
+        pnl_after_fee = pnl - close_fee
+        account["total_fees"] += close_fee
 
     account["cash_balance"] += pnl_after_fee
     account["realized_pnl"] += pnl_after_fee
-    account["total_fees"] += close_fee
 
     pos["status"] = "CLOSED"
     pos["closed_at"] = local_now_str()
@@ -747,7 +796,10 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str, accou
         "reason": "",
         "current_price": safe_round(current, 8),
         "pnl_pct": safe_round(current_pnl_pct(side, entry, current), 4),
-        "pnl_usd": safe_round(calculate_unrealized_pnl(side, entry, current, float(pos["notional"])), 4),
+        "pnl_usd": safe_round(
+            calculate_unrealized_pnl(side, entry, current, float(pos.get("notional", 0) or 0)),
+            4
+        ),
         "market": market,
         "strategy": pos.get("strategy", "-"),
         "side": side,
@@ -873,6 +925,7 @@ def build_summary(account: dict, market_rows: list[dict], open_positions: dict, 
                 "sl": pos.get("sl"),
                 "margin": pos.get("margin"),
                 "notional": pos.get("notional"),
+                "leverage": pos.get("leverage"),
                 "size": pos.get("size"),
                 "opened_at": pos.get("opened_at"),
             })
@@ -912,11 +965,11 @@ def main():
     new_signals = []
     latest_market = {}
 
-    # 1. 扫市场
+    # 扫市场
     for sym in CONFIG["symbols"]:
         try:
             print("processing", sym)
-            df = fetch_bitget(
+            raw_df = fetch_bitget(
                 sym,
                 interval=CONFIG["interval"],
                 limit=CONFIG["bars"],
@@ -924,12 +977,12 @@ def main():
                 max_pages=CONFIG["max_pages"]
             )
 
-            if df.empty or len(df) < 300:
+            if raw_df.empty or len(raw_df) < 300:
                 continue
 
-            decision = strategy_decision(df)
+            decision = strategy_decision(raw_df)
             latest_market[sym] = {
-                "df": add_strategy_indicators(df),
+                "df": add_strategy_indicators(raw_df),
                 "market": decision["market"],
                 "decision": decision,
             }
@@ -953,7 +1006,7 @@ def main():
                 "reason": str(e),
             })
 
-    # 2. 收资金费
+    # 收资金费
     funding_paid = apply_funding(account, positions)
     if funding_paid > 0:
         decision_logs.append({
@@ -964,7 +1017,7 @@ def main():
             "reason": f"本轮收取资金费 {funding_paid:.4f}U",
         })
 
-    # 3. 更新持仓
+    # 更新持仓
     for symbol, pos in list(positions.items()):
         if pos.get("status") != "OPEN":
             continue
@@ -1006,10 +1059,10 @@ def main():
             "sl": decision["sl"],
         })
 
-    # 4. 账户快照
+    # 账户快照
     update_account_snapshot(account, positions, latest_market)
 
-    # 5. 新开仓
+    # 新开仓
     open_count = sum(1 for p in positions.values() if p.get("status") == "OPEN")
     slots_left = max(int(CONFIG["max_open_positions"]) - open_count, 0)
 
@@ -1096,12 +1149,13 @@ def main():
                 "sl": signal["sl"],
                 "margin": sizing["margin"],
                 "notional": sizing["notional"],
+                "leverage": sizing["leverage"],
             })
 
-    # 6. 再更新账户
+    # 再更新账户
     update_account_snapshot(account, positions, latest_market)
 
-    # 7. 保存
+    # 保存
     save_positions(positions)
     save_account(account)
     append_decision_logs(decision_logs)

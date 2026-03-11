@@ -18,6 +18,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install pandas numpy requests
 
       - name: Run backtest
@@ -27,6 +28,7 @@ jobs:
         run: |
           echo "=== root ==="
           ls -lah
+          echo ""
           echo "=== reports ==="
           ls -lah reports || true
 
@@ -35,18 +37,43 @@ jobs:
         with:
           name: latest-summary
           path: latest_summary.txt
+          if-no-files-found: warn
+
+      - name: Upload root result files
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-root-files
+          path: |
+            best_strategies.csv
+            overall_ranking.csv
+            all_strategy_details.csv
+            market_snapshots.json
+            generated_files.json
+            backtest_package.zip
+          if-no-files-found: warn
 
       - name: Upload reports folder
         uses: actions/upload-artifact@v4
         with:
           name: backtest-reports
-          path: reports/
+          path: reports/**
+          if-no-files-found: warn
 
-      - name: Zip reports
-        run: zip -r backtest_reports.zip reports latest_summary.txt
+      - name: Build full zip package
+        run: |
+          rm -f backtest_reports_full.zip
+          zip -r backtest_reports_full.zip \
+            latest_summary.txt \
+            best_strategies.csv \
+            overall_ranking.csv \
+            all_strategy_details.csv \
+            market_snapshots.json \
+            generated_files.json \
+            reports || true
 
-      - name: Upload zip package
+      - name: Upload full zip package
         uses: actions/upload-artifact@v4
         with:
-          name: backtest-package
-          path: backtest_reports.zip
+          name: backtest-full-package
+          path: backtest_reports_full.zip
+          if-no-files-found: warn

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-VERSION = "V6.3_中文策略实验室"
+VERSION = "V6.4_多市场策略实验室"
 BASE_URL = "https://api.bitget.com/api/v2/mix/market/candles"
 
 
@@ -17,6 +17,14 @@ def 当前时间字符串():
 
 def 创建目录(path: str):
     os.makedirs(path, exist_ok=True)
+
+
+def 百分比格式(x):
+    return f"{x:.2f}%"
+
+
+def 数字格式(x):
+    return f"{x:.2f}"
 
 
 def 纯ASCII表格(df: pd.DataFrame) -> str:
@@ -37,7 +45,6 @@ def 纯ASCII表格(df: pd.DataFrame) -> str:
         return " | ".join(str(row[i]).ljust(widths[i]) for i in range(len(cols)))
 
     sep = "-+-".join("-" * w for w in widths)
-
     output = [fmt_row(cols), sep]
     for row in rows:
         output.append(fmt_row(row))
@@ -67,11 +74,11 @@ def 抓取K线数据(symbol="BTCUSDT", interval="5m", pages=15, sleep_sec=0.15):
             data = payload.get("data", [])
 
             if not data:
-                print("没有更多数据，停止抓取。")
+                print(f"{symbol} {interval} 没有更多数据，停止抓取。")
                 break
 
             if end_time in seen_end_times:
-                print("endTime 重复，停止抓取。")
+                print(f"{symbol} {interval} endTime 重复，停止抓取。")
                 break
             seen_end_times.add(end_time)
 
@@ -79,17 +86,17 @@ def 抓取K线数据(symbol="BTCUSDT", interval="5m", pages=15, sleep_sec=0.15):
             all_data.extend(data)
 
             if new_end_time == end_time:
-                print("endTime 未变化，停止抓取。")
+                print(f"{symbol} {interval} endTime 未变化，停止抓取。")
                 break
 
             end_time = new_end_time
             time.sleep(sleep_sec)
 
         except requests.RequestException as e:
-            print(f"请求失败: {e}")
+            print(f"{symbol} {interval} 请求失败: {e}")
             break
         except (ValueError, KeyError, TypeError) as e:
-            print(f"数据解析失败: {e}")
+            print(f"{symbol} {interval} 数据解析失败: {e}")
             break
 
     if not all_data:
@@ -121,6 +128,12 @@ def 抓取K线数据(symbol="BTCUSDT", interval="5m", pages=15, sleep_sec=0.15):
     return df
 
 
+def 切取最近bars(df: pd.DataFrame, bars: int) -> pd.DataFrame:
+    if len(df) <= bars:
+        return df.copy()
+    return df.tail(bars).reset_index(drop=True)
+
+
 def 计算指标(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
@@ -144,6 +157,15 @@ def 计算指标(df: pd.DataFrame) -> pd.DataFrame:
     avg_loss = loss.ewm(alpha=1 / 14, adjust=False).mean()
     rs = avg_gain / avg_loss.replace(0, np.nan)
     df["rsi_14"] = 100 - (100 / (1 + rs))
+
+    for rsi_period in [7, 10, 14, 21]:
+        delta_p = df["close"].diff()
+        gain_p = delta_p.clip(lower=0)
+        loss_p = -delta_p.clip(upper=0)
+        avg_gain_p = gain_p.ewm(alpha=1 / rsi_period, adjust=False).mean()
+        avg_loss_p = loss_p.ewm(alpha=1 / rsi_period, adjust=False).mean()
+        rs_p = avg_gain_p / avg_loss_p.replace(0, np.nan)
+        df[f"rsi_{rsi_period}"] = 100 - (100 / (1 + rs_p))
 
     ema12 = df["close"].ewm(span=12, adjust=False).mean()
     ema26 = df["close"].ewm(span=26, adjust=False).mean()
@@ -258,11 +280,12 @@ def 生成策略库(df: pd.DataFrame):
             signal=条件转信号(long_cond, short_cond),
         )
 
-    for low, high, with_trend in product([20, 25, 30], [70, 75, 80], [False, True]):
+    for rsi_period, low, high, with_trend in product([7, 10, 14, 21], [18, 20, 22, 25, 30], [70, 75, 78, 80, 82], [False, True]):
         if low >= high:
             continue
-        base_long = df["rsi_14"] < low
-        base_short = df["rsi_14"] > high
+        rsi_col = f"rsi_{rsi_period}"
+        base_long = df[rsi_col] < low
+        base_short = df[rsi_col] > high
 
         if with_trend:
             long_cond = base_long & (df["close"] > df["ema_200"])
@@ -272,16 +295,15 @@ def 生成策略库(df: pd.DataFrame):
             short_cond = base_short
 
         新增策略(
-            name_cn=f"RSI均值回归 {low}/{high} 趋势过滤={with_trend}",
+            name_cn=f"RSI均值回归 RSI{rsi_period} {low}/{high} 趋势过滤={with_trend}",
             family_cn="RSI均值回归类",
-            params={"RSI低点": low, "RSI高点": high, "趋势过滤": with_trend},
+            params={"RSI周期": rsi_period, "RSI低点": low, "RSI高点": high, "趋势过滤": with_trend},
             signal=条件转信号(long_cond, short_cond),
         )
 
     for with_trend in [False, True]:
         long_cond = df["close"] < df["bb_lower_2"]
         short_cond = df["close"] > df["bb_upper_2"]
-
         if with_trend:
             long_cond = long_cond & (df["close"] > df["ema_200"])
             short_cond = short_cond & (df["close"] < df["ema_200"])
@@ -293,7 +315,7 @@ def 生成策略库(df: pd.DataFrame):
             signal=条件转信号(long_cond, short_cond),
         )
 
-    for pct, base in product([0.005, 0.01, 0.015, 0.02], ["ema_20", "ema_50"]):
+    for pct, base in product([0.005, 0.008, 0.010, 0.012, 0.015, 0.018, 0.020], ["ema_20", "ema_50"]):
         long_cond = df["close"] < df[base] * (1 - pct)
         short_cond = df["close"] > df[base] * (1 + pct)
         新增策略(
@@ -346,7 +368,7 @@ def 最大回撤(equity_curve: pd.Series) -> float:
     return float(drawdown.min())
 
 
-def 夏普(net_ret: pd.Series, bars_per_year=12 * 24 * 365) -> float:
+def 夏普(net_ret: pd.Series, bars_per_year: float) -> float:
     std = net_ret.std()
     if std == 0 or pd.isna(std):
         return 0.0
@@ -359,9 +381,20 @@ def 卡玛(total_return: float, max_dd: float) -> float:
     return float(total_return / abs(max_dd))
 
 
-def 回测单策略(df: pd.DataFrame, signal, fee_rate=0.0006, slippage=0.0002):
-    raw_signal = pd.Series(signal, index=df.index)
+def 周期年化bar数(interval: str) -> int:
+    mapping = {
+        "3m": 20 * 24 * 365,
+        "5m": 12 * 24 * 365,
+        "15m": 4 * 24 * 365,
+        "30m": 2 * 24 * 365,
+        "1H": 24 * 365,
+        "4H": 6 * 365,
+    }
+    return mapping.get(interval, 12 * 24 * 365)
 
+
+def 回测单策略(df: pd.DataFrame, signal, fee_rate=0.0006, slippage=0.0002, interval="5m"):
+    raw_signal = pd.Series(signal, index=df.index)
     pos = raw_signal.replace(0, np.nan).ffill().fillna(0)
     pos = pos.shift(1).fillna(0)
 
@@ -374,7 +407,7 @@ def 回测单策略(df: pd.DataFrame, signal, fee_rate=0.0006, slippage=0.0002):
 
     total_return = float(equity_curve.iloc[-1] - 1)
     max_dd = 最大回撤(equity_curve)
-    sharpe = 夏普(net_ret)
+    sharpe = 夏普(net_ret, 周期年化bar数(interval))
     calmar = 卡玛(total_return, max_dd)
 
     entries = int(((pos != 0) & (pos.shift(1).fillna(0) == 0)).sum())
@@ -413,17 +446,24 @@ def 回测单策略(df: pd.DataFrame, signal, fee_rate=0.0006, slippage=0.0002):
 def 计算综合评分(report: pd.DataFrame) -> pd.DataFrame:
     df = report.copy()
     df["综合评分"] = (
-        df["收益率(%)"] * 0.45
-        + df["夏普值"] * 2.0
-        + df["卡玛值"] * 8.0
-        + df["胜率(%)"] * 0.03
-        + df["盈亏比"] * 4.0
-        - df["最大回撤(%)"].abs() * 0.35
+        df["收益率(%)"] * 0.30
+        + df["夏普值"] * 1.2
+        + df["卡玛值"] * 5.0
+        + df["胜率(%)"] * 0.02
+        + df["盈亏比"] * 3.0
+        - df["最大回撤(%)"].abs() * 0.45
     )
+
+    df["是否通过基础门槛"] = (
+        (df["开仓次数"] >= 3)
+        & (df["持仓占比(%)"] <= 95)
+        & (df["最大回撤(%)"] >= -20)
+    )
+
     return df
 
 
-def 跑策略实验室(df, fee_rate=0.0006, slippage=0.0002):
+def 跑单场景(df: pd.DataFrame, interval: str, fee_rate=0.0006, slippage=0.0002):
     df = 计算指标(df)
     strategies, catalog_df = 生成策略库(df)
 
@@ -431,7 +471,13 @@ def 跑策略实验室(df, fee_rate=0.0006, slippage=0.0002):
     equity_table = pd.DataFrame({"时间": df["timestamp"]})
 
     for strategy_id, meta in strategies.items():
-        result = 回测单策略(df, meta["signal"], fee_rate=fee_rate, slippage=slippage)
+        result = 回测单策略(
+            df=df,
+            signal=meta["signal"],
+            fee_rate=fee_rate,
+            slippage=slippage,
+            interval=interval,
+        )
         summary = result["summary"]
         summary["策略ID"] = strategy_id
         summary["策略分类"] = meta["family_cn"]
@@ -441,13 +487,17 @@ def 跑策略实验室(df, fee_rate=0.0006, slippage=0.0002):
 
     report = pd.DataFrame(results)
     report = 计算综合评分(report)
-    report = report.sort_values(by="综合评分", ascending=False).reset_index(drop=True)
+
+    report = report.sort_values(
+        by=["是否通过基础门槛", "综合评分"],
+        ascending=[False, False]
+    ).reset_index(drop=True)
 
     benchmark = ((1 + df["ret"]).cumprod().iloc[-1] - 1) * 100
     return report, benchmark, equity_table, catalog_df
 
 
-def 构建控制台报表(report: pd.DataFrame, top_n=20):
+def 构建控制台报表(report: pd.DataFrame, top_n=15):
     view = report.head(top_n).copy()
     view = view[
         [
@@ -463,127 +513,294 @@ def 构建控制台报表(report: pd.DataFrame, top_n=20):
             "胜率(%)",
             "盈亏比",
             "综合评分",
+            "是否通过基础门槛",
         ]
     ]
 
     for col in ["收益率(%)", "最大回撤(%)", "持仓占比(%)", "胜率(%)"]:
-        view[col] = view[col].map(lambda x: f"{x:.2f}%")
+        view[col] = view[col].map(百分比格式)
 
     for col in ["夏普值", "卡玛值", "盈亏比", "综合评分"]:
-        view[col] = view[col].map(lambda x: f"{x:.2f}")
+        view[col] = view[col].map(数字格式)
+
+    view["是否通过基础门槛"] = view["是否通过基础门槛"].map(lambda x: "是" if x else "否")
+    return view
+
+
+def 汇总稳定度(所有场景结果: pd.DataFrame) -> pd.DataFrame:
+    df = 所有场景结果.copy()
+
+    df["进前10"] = df["场景内排名"] <= 10
+    df["进前3"] = df["场景内排名"] <= 3
+    df["冠军"] = df["场景内排名"] == 1
+
+    grouped = df.groupby(["策略ID", "策略名称", "策略分类"], as_index=False).agg(
+        场景数=("场景名", "count"),
+        平均排名=("场景内排名", "mean"),
+        前十次数=("进前10", "sum"),
+        前三次数=("进前3", "sum"),
+        冠军次数=("冠军", "sum"),
+        平均收益率=("收益率(%)", "mean"),
+        平均最大回撤=("最大回撤(%)", "mean"),
+        平均夏普=("夏普值", "mean"),
+        平均卡玛=("卡玛值", "mean"),
+        平均胜率=("胜率(%)", "mean"),
+        平均盈亏比=("盈亏比", "mean"),
+        平均评分=("综合评分", "mean"),
+        通过门槛次数=("是否通过基础门槛", "sum"),
+    )
+
+    grouped["通过率(%)"] = grouped["通过门槛次数"] / grouped["场景数"] * 100
+    grouped["前十率(%)"] = grouped["前十次数"] / grouped["场景数"] * 100
+    grouped["前三率(%)"] = grouped["前三次数"] / grouped["场景数"] * 100
+    grouped["冠军率(%)"] = grouped["冠军次数"] / grouped["场景数"] * 100
+
+    grouped = grouped.sort_values(
+        by=["冠军次数", "前三次数", "前十次数", "平均评分"],
+        ascending=[False, False, False, False],
+    ).reset_index(drop=True)
+
+    return grouped
+
+
+def 构建全局控制台报表(稳定度表: pd.DataFrame, top_n=20):
+    view = 稳定度表.head(top_n).copy()
+    view = view[
+        [
+            "策略ID",
+            "策略分类",
+            "场景数",
+            "平均排名",
+            "前十次数",
+            "前三次数",
+            "冠军次数",
+            "平均收益率",
+            "平均最大回撤",
+            "平均夏普",
+            "平均评分",
+            "通过率(%)",
+        ]
+    ]
+
+    for col in ["平均排名", "平均收益率", "平均最大回撤", "平均夏普", "平均评分", "通过率(%)"]:
+        if col == "通过率(%)":
+            view[col] = view[col].map(百分比格式)
+        else:
+            view[col] = view[col].map(数字格式)
 
     return view
 
 
-def 构建Markdown报告(report: pd.DataFrame, benchmark: float, top_n=30) -> str:
-    best = report.iloc[0]
-
-    md = []
-    md.append(f"# {VERSION} 回测报告")
-    md.append("")
-    md.append(f"- 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    md.append(f"- 基准收益: {benchmark:.2f}%")
-    md.append(f"- 策略总数: {len(report)}")
-    md.append(f"- 最佳策略ID: {best['策略ID']}")
-    md.append(f"- 最佳策略名称: {best['策略名称']}")
-    md.append(f"- 最佳综合评分: {best['综合评分']:.2f}")
-    md.append("")
-
-    top_view = report.head(top_n).copy()
-    try:
-        md.append(top_view.to_markdown(index=False, floatfmt=".2f"))
-    except Exception:
-        md.append(top_view.to_string(index=False))
-
-    md.append("")
-    return "\n".join(md)
-
-
-def 保存输出(report, benchmark, equity_table, catalog_df, console_report, symbol, interval):
+def 保存输出(
+    场景摘要表,
+    所有场景结果,
+    稳定度表,
+    策略目录表,
+    全局控制台报表,
+    场景冠军表,
+):
     ts = 当前时间字符串()
     out_dir = os.path.join("outputs", ts)
     创建目录(out_dir)
 
-    report_path = os.path.join(out_dir, f"回测结果_{symbol}_{interval}_{ts}.csv")
-    equity_path = os.path.join(out_dir, f"资金曲线_{symbol}_{interval}_{ts}.csv")
-    catalog_path = os.path.join(out_dir, f"策略目录_{symbol}_{interval}_{ts}.csv")
-    summary_txt_path = os.path.join(out_dir, f"回测摘要_{symbol}_{interval}_{ts}.txt")
-    summary_md_path = os.path.join(out_dir, f"回测摘要_{symbol}_{interval}_{ts}.md")
+    路径 = {
+        "输出目录": out_dir,
+        "场景摘要文件": os.path.join(out_dir, f"场景摘要_{ts}.csv"),
+        "全部结果文件": os.path.join(out_dir, f"全部场景策略结果_{ts}.csv"),
+        "稳定度统计文件": os.path.join(out_dir, f"策略稳定度统计_{ts}.csv"),
+        "策略目录文件": os.path.join(out_dir, f"策略目录_{ts}.csv"),
+        "场景冠军文件": os.path.join(out_dir, f"场景冠军列表_{ts}.csv"),
+        "摘要TXT文件": os.path.join(out_dir, f"总摘要_{ts}.txt"),
+        "摘要MD文件": os.path.join(out_dir, f"总摘要_{ts}.md"),
+    }
 
-    report.to_csv(report_path, index=False, encoding="utf-8-sig")
-    equity_table.to_csv(equity_path, index=False, encoding="utf-8-sig")
-    catalog_df.to_csv(catalog_path, index=False, encoding="utf-8-sig")
+    场景摘要表.to_csv(路径["场景摘要文件"], index=False, encoding="utf-8-sig")
+    所有场景结果.to_csv(路径["全部结果文件"], index=False, encoding="utf-8-sig")
+    稳定度表.to_csv(路径["稳定度统计文件"], index=False, encoding="utf-8-sig")
+    策略目录表.to_csv(路径["策略目录文件"], index=False, encoding="utf-8-sig")
+    场景冠军表.to_csv(路径["场景冠军文件"], index=False, encoding="utf-8-sig")
 
-    with open(summary_txt_path, "w", encoding="utf-8-sig") as f:
-        f.write(f"[{VERSION}] 中文策略实验室\n")
+    with open(路径["摘要TXT文件"], "w", encoding="utf-8-sig") as f:
+        f.write(f"[{VERSION}] 多市场多周期回测总摘要\n")
         f.write(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"交易对: {symbol}\n")
-        f.write(f"周期: {interval}\n")
-        f.write(f"基准收益: {benchmark:.2f}%\n")
-        f.write(f"策略总数: {len(report)}\n\n")
-        f.write(纯ASCII表格(console_report))
+        f.write(f"总场景数: {len(场景摘要表)}\n")
+        f.write(f"策略总数: {稳定度表['策略ID'].nunique()}\n\n")
+        f.write("全局稳定度 Top 20\n")
+        f.write(纯ASCII表格(全局控制台报表))
+        f.write("\n\n场景冠军列表\n")
+        f.write(纯ASCII表格(场景冠军表.head(20)))
         f.write("\n")
 
-    with open(summary_md_path, "w", encoding="utf-8-sig") as f:
-        f.write(构建Markdown报告(report, benchmark, top_n=30))
+    with open(路径["摘要MD文件"], "w", encoding="utf-8-sig") as f:
+        f.write(f"# {VERSION} 多市场多周期回测总摘要\n\n")
+        f.write(f"- 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"- 总场景数: {len(场景摘要表)}\n")
+        f.write(f"- 策略总数: {稳定度表['策略ID'].nunique()}\n\n")
+        f.write("## 全局稳定度 Top 20\n\n")
+        try:
+            f.write(全局控制台报表.to_markdown(index=False))
+        except Exception:
+            f.write(全局控制台报表.to_string(index=False))
+        f.write("\n\n## 场景冠军列表\n\n")
+        try:
+            f.write(场景冠军表.head(20).to_markdown(index=False))
+        except Exception:
+            f.write(场景冠军表.head(20).to_string(index=False))
+        f.write("\n")
 
-    return {
-        "输出目录": out_dir,
-        "回测结果文件": report_path,
-        "资金曲线文件": equity_path,
-        "策略目录文件": catalog_path,
-        "摘要TXT文件": summary_txt_path,
-        "摘要MD文件": summary_md_path,
-    }
+    return 路径
 
 
 if __name__ == "__main__":
-    SYMBOL = "BTCUSDT"
-    INTERVAL = "5m"
-    PAGES = 15
+    SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    INTERVALS = ["5m", "15m"]
+    WINDOW_BARS = {
+        "近7天": {
+            "5m": 7 * 24 * 12,
+            "15m": 7 * 24 * 4,
+        },
+        "近30天": {
+            "5m": 30 * 24 * 12,
+            "15m": 30 * 24 * 4,
+        },
+    }
+
+    FETCH_PAGES = {
+        "5m": 12,
+        "15m": 12,
+    }
+
     FEE_RATE = 0.0006
     SLIPPAGE = 0.0002
-    TOP_N_CONSOLE = 20
+    TOP_N_SCENE = 15
+    TOP_N_GLOBAL = 20
 
-    df = 抓取K线数据(symbol=SYMBOL, interval=INTERVAL, pages=PAGES)
+    所有场景结果列表 = []
+    场景摘要列表 = []
+    场景冠军列表 = []
+    全部策略目录 = []
 
-    if df.empty:
-        print("没有成功获取到数据。")
+    for symbol in SYMBOLS:
+        for interval in INTERVALS:
+            df_raw = 抓取K线数据(
+                symbol=symbol,
+                interval=interval,
+                pages=FETCH_PAGES.get(interval, 12),
+            )
+
+            if df_raw.empty:
+                print(f"{symbol} {interval} 无数据，跳过。")
+                continue
+
+            for window_name, interval_map in WINDOW_BARS.items():
+                bars = interval_map[interval]
+                df_scene = 切取最近bars(df_raw, bars)
+
+                if len(df_scene) < 300:
+                    print(f"{symbol} {interval} {window_name} 数据太少，跳过。")
+                    continue
+
+                scene_name = f"{symbol}_{interval}_{window_name}"
+                print(f"\n开始场景: {scene_name} | bars={len(df_scene)}")
+
+                report, benchmark, equity_table, catalog_df = 跑单场景(
+                    df=df_scene,
+                    interval=interval,
+                    fee_rate=FEE_RATE,
+                    slippage=SLIPPAGE,
+                )
+
+                report["场景名"] = scene_name
+                report["交易对"] = symbol
+                report["周期"] = interval
+                report["时间窗口"] = window_name
+                report["基准收益(%)"] = benchmark
+                report["场景内排名"] = np.arange(1, len(report) + 1)
+
+                if not 全部策略目录:
+                    全部策略目录.append(catalog_df)
+
+                所有场景结果列表.append(report)
+
+                best = report.iloc[0]
+                场景冠军列表.append(
+                    {
+                        "场景名": scene_name,
+                        "交易对": symbol,
+                        "周期": interval,
+                        "时间窗口": window_name,
+                        "基准收益(%)": benchmark,
+                        "冠军策略ID": best["策略ID"],
+                        "冠军策略名称": best["策略名称"],
+                        "冠军策略分类": best["策略分类"],
+                        "冠军收益率(%)": best["收益率(%)"],
+                        "冠军最大回撤(%)": best["最大回撤(%)"],
+                        "冠军夏普值": best["夏普值"],
+                        "冠军综合评分": best["综合评分"],
+                        "是否通过基础门槛": best["是否通过基础门槛"],
+                    }
+                )
+
+                场景摘要列表.append(
+                    {
+                        "场景名": scene_name,
+                        "交易对": symbol,
+                        "周期": interval,
+                        "时间窗口": window_name,
+                        "K线数量": len(df_scene),
+                        "基准收益(%)": benchmark,
+                        "冠军策略ID": best["策略ID"],
+                        "冠军策略名称": best["策略名称"],
+                        "冠军策略分类": best["策略分类"],
+                        "冠军收益率(%)": best["收益率(%)"],
+                        "冠军最大回撤(%)": best["最大回撤(%)"],
+                        "冠军夏普值": best["夏普值"],
+                        "冠军综合评分": best["综合评分"],
+                    }
+                )
+
+                print(f"场景完成: {scene_name}")
+                print(f"冠军: {best['策略ID']} | {best['策略名称']} | 收益 {best['收益率(%)']:.2f}% | 评分 {best['综合评分']:.2f}")
+                print(纯ASCII表格(构建控制台报表(report, top_n=TOP_N_SCENE)))
+                print("-" * 120)
+
+    if not 所有场景结果列表:
+        print("没有任何场景成功跑完。")
     else:
-        report, benchmark, equity_table, catalog_df = 跑策略实验室(
-            df=df,
-            fee_rate=FEE_RATE,
-            slippage=SLIPPAGE,
+        所有场景结果 = pd.concat(所有场景结果列表, ignore_index=True)
+        场景摘要表 = pd.DataFrame(场景摘要列表)
+        场景冠军表 = pd.DataFrame(场景冠军列表)
+        策略目录表 = pd.concat(全部策略目录, ignore_index=True).drop_duplicates().reset_index(drop=True)
+
+        稳定度表 = 汇总稳定度(所有场景结果)
+        全局控制台报表 = 构建全局控制台报表(稳定度表, top_n=TOP_N_GLOBAL)
+
+        print("\n全局稳定度 Top 20")
+        print(纯ASCII表格(全局控制台报表))
+
+        best_global = 稳定度表.iloc[0]
+        print("\n全局最稳策略")
+        print(f"- 策略ID: {best_global['策略ID']}")
+        print(f"- 策略名称: {best_global['策略名称']}")
+        print(f"- 策略分类: {best_global['策略分类']}")
+        print(f"- 场景数: {best_global['场景数']}")
+        print(f"- 平均排名: {best_global['平均排名']:.2f}")
+        print(f"- 冠军次数: {best_global['冠军次数']}")
+        print(f"- 前三次数: {best_global['前三次数']}")
+        print(f"- 前十次数: {best_global['前十次数']}")
+        print(f"- 平均收益率: {best_global['平均收益率']:.2f}%")
+        print(f"- 平均最大回撤: {best_global['平均最大回撤']:.2f}%")
+        print(f"- 平均评分: {best_global['平均评分']:.2f}")
+
+        路径 = 保存输出(
+            场景摘要表=场景摘要表,
+            所有场景结果=所有场景结果,
+            稳定度表=稳定度表,
+            策略目录表=策略目录表,
+            全局控制台报表=全局控制台报表,
+            场景冠军表=场景冠军表,
         )
-
-        console_report = 构建控制台报表(report, top_n=TOP_N_CONSOLE)
-
-        print(f"\n[{VERSION}] 策略实验室结果")
-        print(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"基准收益: {benchmark:.2f}%")
-        print(f"策略总数: {len(report)}")
-        print()
-        print(纯ASCII表格(console_report))
-
-        paths = 保存输出(
-            report=report,
-            benchmark=benchmark,
-            equity_table=equity_table,
-            catalog_df=catalog_df,
-            console_report=console_report,
-            symbol=SYMBOL,
-            interval=INTERVAL,
-        )
-
-        best = report.iloc[0]
-        print("\n最佳策略")
-        print(f"- 策略ID: {best['策略ID']}")
-        print(f"- 策略名称: {best['策略名称']}")
-        print(f"- 综合评分: {best['综合评分']:.2f}")
-        print(f"- 收益率: {best['收益率(%)']:.2f}%")
-        print(f"- 最大回撤: {best['最大回撤(%)']:.2f}%")
-        print(f"- 夏普值: {best['夏普值']:.2f}")
 
         print("\n已保存文件")
-        for k, v in paths.items():
+        for k, v in 路径.items():
             print(f"- {k}: {v}")

@@ -1,11 +1,13 @@
-import requests
-import pandas as pd
-import numpy as np
-import time
 import os
+import time
 from datetime import datetime
 
-VERSION = "V8.3_STABLE_FIX2"
+import numpy as np
+import pandas as pd
+import requests
+
+VERSION = "V8.3_STABLE_FIX3"
+REPORT_DIR = "reports"
 
 CONFIG = {
     "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT"],
@@ -14,8 +16,6 @@ CONFIG = {
     "fee": 0.0006,
     "slippage": 0.0002,
 }
-
-REPORT_DIR = "reports"
 
 
 def ensure_dir():
@@ -26,11 +26,6 @@ def ensure_dir():
 # 数据抓取
 # -------------------------------------------------
 def normalize_candle_row(row):
-    """
-    Bitget candle 常见格式：
-    [ts, open, high, low, close, baseVol, quoteVol]
-    有时可能有更多字段，这里只取前 7 个
-    """
     if not isinstance(row, (list, tuple)) or len(row) < 6:
         return None
 
@@ -39,7 +34,6 @@ def normalize_candle_row(row):
     if len(row) >= 7:
         return row[:7]
 
-    # 若只有 6 个字段，补一个 quote volume 占位
     return row[:6] + [np.nan]
 
 
@@ -94,7 +88,6 @@ def fetch_bitget(symbol, limit=3000):
         columns=["timestamp", "open", "high", "low", "close", "volume", "quote_volume"]
     )
 
-    # 关键修复：先转 numeric，再转 datetime
     df["timestamp"] = pd.to_numeric(df["timestamp"], errors="coerce")
 
     for c in ["open", "high", "low", "close", "volume", "quote_volume"]:
@@ -103,7 +96,6 @@ def fetch_bitget(symbol, limit=3000):
     df = df.dropna(subset=["timestamp", "open", "high", "low", "close"])
     df = df.drop_duplicates(subset=["timestamp"]).sort_values("timestamp").reset_index(drop=True)
 
-    # 再转 datetime，避免字符串被直接解析导致溢出
     df["timestamp"] = pd.to_datetime(df["timestamp"].astype("int64"), unit="ms", errors="coerce")
     df = df.dropna(subset=["timestamp"]).reset_index(drop=True)
 
@@ -142,7 +134,7 @@ def calc_atr(df, period=14):
     )
 
     atr = tr.rolling(period, min_periods=period).mean()
-    return atr.fillna(method="bfill") if hasattr(atr, "fillna") else atr
+    return atr.bfill()
 
 
 def calc_vwap(df):
@@ -219,7 +211,6 @@ def generate_strategies(df):
 def backtest(df, signal, fee=0.0006, slippage=0.0002):
     signal = pd.Series(signal, index=df.index).fillna(0)
 
-    # 信号延续持仓
     position = signal.replace(0, np.nan).ffill().fillna(0)
     position = position.shift(1).fillna(0)
 
@@ -238,8 +229,9 @@ def backtest(df, signal, fee=0.0006, slippage=0.0002):
     max_dd = drawdown.min() * 100
 
     sharpe = 0.0
-    if net.std() not in [0, np.nan] and pd.notna(net.std()) and net.std() > 0:
-        sharpe = net.mean() / net.std() * np.sqrt(252 * 24 * 12)
+    std = net.std()
+    if pd.notna(std) and std > 0:
+        sharpe = net.mean() / std * np.sqrt(252 * 24 * 12)
 
     return total_return, max_dd, sharpe
 

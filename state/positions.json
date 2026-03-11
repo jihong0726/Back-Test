@@ -20,7 +20,7 @@
     "market": "RANGE",
     "entry": 0.8687,
     "tp": 0.93652023,
-    "sl": 0.87227461,
+    "sl": 0.87263893,
     "size": 0.5,
     "status": "OPEN",
     "partial_taken": true,
@@ -34,7 +34,7 @@
     "market": "RANGE",
     "entry": 1.2859,
     "tp": 1.24913179,
-    "sl": 1.27688502,
+    "sl": 1.27657035,
     "size": 0.5,
     "status": "OPEN",
     "partial_taken": true,
@@ -50,10 +50,13 @@
     "tp": 0.93034021,
     "sl": 0.94902606,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-03-11 07:08:34 UTC",
-    "last_score": 87.08
+    "last_score": 87.08,
+    "closed_at": "2026-03-11 08:44:29 UTC",
+    "exit_price": 0.9499,
+    "exit_reason": "STOP_LOSS"
   },
   "AVAXUSDT": {
     "symbol": "AVAXUSDT",
@@ -85,5 +88,19 @@
     "partial_taken": false,
     "opened_at": "2026-03-11 08:39:22 UTC",
     "last_score": 89.72
+  },
+  "BNBUSDT": {
+    "symbol": "BNBUSDT",
+    "side": "SHORT",
+    "strategy": "VWAP_1.5",
+    "market": "RANGE",
+    "entry": 642.3,
+    "tp": 631.01192346,
+    "sl": 643.21714286,
+    "size": 1.0,
+    "status": "OPEN",
+    "partial_taken": false,
+    "opened_at": "2026-03-11 08:44:29 UTC",
+    "last_score": 92.11
   }
 }

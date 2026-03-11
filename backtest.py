@@ -5,21 +5,22 @@ import math
 import requests
 import numpy as np
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import unicodedata
 
-VERSION = "V8.0_多币对_多策略_样本内外鲁棒性回测"
+VERSION = "V8.1_多币对_多策略_强化抓数版"
 REPORT_DIR = "reports"
 
 CONFIG = {
     "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT"],
     "interval": "5m",
-    "rounds": 12,
-    "limit": 500,
+    "target_bars": 3000,          # 目标抓取K线数
+    "request_limit": 1000,        # Bitget v2 candles 最大 1000
+    "max_pages": 8,               # 最多翻页次数
     "fee_rate": 0.0006,
     "slippage_rate": 0.0002,
     "train_ratio": 0.6,
-    "min_bars_required": 800
+    "min_bars_required": 1200     # 至少要有这么多K线才回测
 }
 
 
@@ -83,10 +84,6 @@ def format_table(df: pd.DataFrame, right_align_cols=None) -> str:
     return "\n".join(lines)
 
 
-def safe_pct(x):
-    return f"{x:.2f}%" if pd.notna(x) else "N/A"
-
-
 def safe_num(x, n=2):
     return f"{x:.{n}f}" if pd.notna(x) else "N/A"
 
@@ -107,18 +104,42 @@ def annual_factor_from_interval(interval: str) -> float:
 # =========================================================
 # 数据抓取
 # =========================================================
-def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", rounds=12, limit=500):
-    url = "https://api.bitget.com/api/v2/mix/market/candles"
-    end_time = str(int(time.time() * 1000))
-    all_data = []
+def interval_to_ms(interval: str) -> int:
+    mapping = {
+        "1m": 60_000,
+        "3m": 3 * 60_000,
+        "5m": 5 * 60_000,
+        "15m": 15 * 60_000,
+        "30m": 30 * 60_000,
+        "1H": 60 * 60_000,
+        "4H": 4 * 60 * 60_000,
+        "6H": 6 * 60 * 60_000,
+        "12H": 12 * 60 * 60_000,
+        "1D": 24 * 60 * 60_000,
+    }
+    return mapping.get(interval, 5 * 60_000)
 
-    for _ in range(rounds):
+
+def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", target_bars=3000, request_limit=1000, max_pages=8):
+    """
+    使用 Bitget v2 合约 candles 接口反复往前翻页抓更旧数据。
+    """
+    url = "https://api.bitget.com/api/v2/mix/market/candles"
+    step_ms = interval_to_ms(interval)
+
+    end_time = int(time.time() * 1000)
+    all_rows = []
+    seen_ts = set()
+
+    print(f"[{symbol}] 开始抓取，目标K线数: {target_bars}")
+
+    for page in range(max_pages):
         params = {
             "symbol": symbol,
             "productType": "USDT-FUTURES",
             "granularity": interval,
-            "endTime": end_time,
-            "limit": str(limit)
+            "endTime": str(end_time),
+            "limit": str(min(request_limit, 1000))
         }
 
         try:
@@ -128,37 +149,52 @@ def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", rounds=12, limit=500):
             data = payload.get("data", [])
 
             if not data:
+                print(f"[{symbol}] 第 {page + 1} 页无数据，停止。")
                 break
 
-            new_end_time = data[-1][0]
-            if str(new_end_time) == str(end_time):
+            batch = []
+            for row in data:
+                ts = int(row[0])
+                if ts not in seen_ts:
+                    seen_ts.add(ts)
+                    batch.append(row)
+
+            if not batch:
+                print(f"[{symbol}] 第 {page + 1} 页全部重复，停止。")
                 break
 
-            all_data.extend(data)
-            end_time = new_end_time
-            time.sleep(0.08)
+            all_rows.extend(batch)
+
+            oldest_ts = min(int(r[0]) for r in batch)
+            newest_ts = max(int(r[0]) for r in batch)
+            print(f"[{symbol}] 第 {page + 1} 页新增 {len(batch)} 根，时间范围: {oldest_ts} ~ {newest_ts}，累计 {len(all_rows)} 根")
+
+            if len(all_rows) >= target_bars:
+                break
+
+            # 往前翻页：取当前最老K线之前
+            end_time = oldest_ts - step_ms
+
+            time.sleep(0.12)
 
         except Exception as e:
             print(f"[{symbol}] 抓取失败: {e}")
             break
 
-    if not all_data:
+    if not all_rows:
         return pd.DataFrame()
 
     df = pd.DataFrame(
-        all_data,
+        all_rows,
         columns=["timestamp", "open", "high", "low", "close", "base_vol", "quote_vol"]
     )
 
-    df["timestamp"] = pd.to_numeric(df["timestamp"], errors="coerce")
-    df = df.dropna(subset=["timestamp"]).drop_duplicates(subset=["timestamp"])
-    df = df.sort_values("timestamp").reset_index(drop=True)
-
-    for col in ["open", "high", "low", "close", "base_vol", "quote_vol"]:
+    for col in ["timestamp", "open", "high", "low", "close", "base_vol", "quote_vol"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    df = df.dropna().reset_index(drop=True)
+    df = df.dropna().drop_duplicates(subset=["timestamp"]).sort_values("timestamp").reset_index(drop=True)
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+
     return df
 
 
@@ -270,112 +306,78 @@ def signal_from_conditions(long_cond, short_cond):
 def generate_strategies(df: pd.DataFrame):
     s = {}
 
-    # 1) EMA Cross 系列
     ema_pairs = [(9, 20), (12, 34), (20, 50), (21, 55), (50, 200)]
     for fast, slow in ema_pairs:
-        name = f"EMA交叉_{fast}_{slow}"
-        s[name] = signal_from_conditions(
+        s[f"EMA交叉_{fast}_{slow}"] = signal_from_conditions(
             df[f"ema_{fast}"] > df[f"ema_{slow}"],
             df[f"ema_{fast}"] < df[f"ema_{slow}"]
         )
 
-    # 2) EMA + RSI 趋势过滤
     trend_cfgs = [
         (20, 50, 55, 45),
         (21, 55, 58, 42),
         (50, 200, 55, 45),
     ]
     for fast, slow, rsi_up, rsi_dn in trend_cfgs:
-        name = f"趋势过滤_EMA{fast}_{slow}_RSI{rsi_up}_{rsi_dn}"
-        s[name] = signal_from_conditions(
+        s[f"趋势过滤_EMA{fast}_{slow}_RSI{rsi_up}_{rsi_dn}"] = signal_from_conditions(
             (df[f"ema_{fast}"] > df[f"ema_{slow}"]) & (df["rsi_14"] > rsi_up),
             (df[f"ema_{fast}"] < df[f"ema_{slow}"]) & (df["rsi_14"] < rsi_dn)
         )
 
-    # 3) MACD + RSI
-    macd_cfgs = [(55, 45), (60, 40), (52, 48)]
-    for up, dn in macd_cfgs:
-        name = f"MACD_RSI过滤_{up}_{dn}"
-        s[name] = signal_from_conditions(
+    for up, dn in [(55, 45), (60, 40), (52, 48)]:
+        s[f"MACD_RSI过滤_{up}_{dn}"] = signal_from_conditions(
             (df["macd"] > df["macd_signal"]) & (df["rsi_7"] > up),
             (df["macd"] < df["macd_signal"]) & (df["rsi_7"] < dn)
         )
 
-    # 4) MACD Hist + EMA
     for ema in [20, 50]:
-        name = f"MACD柱体_EMA{ema}"
-        s[name] = signal_from_conditions(
+        s[f"MACD柱体_EMA{ema}"] = signal_from_conditions(
             (df["macd_hist"] > 0) & (df["close"] > df[f"ema_{ema}"]),
             (df["macd_hist"] < 0) & (df["close"] < df[f"ema_{ema}"])
         )
 
-    # 5) 放量突破
-    vol_cfgs = [
-        (20, 1.2),
-        (20, 1.4),
-        (50, 1.2),
-    ]
-    for vol_len, mult in vol_cfgs:
-        name = f"放量突破_VOL{vol_len}_{mult}"
+    for vol_len, mult in [(20, 1.2), (20, 1.4), (50, 1.2)]:
         vol_col = f"vol_ma_{vol_len}"
-        s[name] = signal_from_conditions(
+        s[f"放量突破_VOL{vol_len}_{mult}"] = signal_from_conditions(
             (df["close"] > df["ema_20"]) & (df["base_vol"] > df[vol_col] * mult),
             (df["close"] < df["ema_20"]) & (df["base_vol"] > df[vol_col] * mult)
         )
 
-    # 6) ATR Breakout
-    atr_cfgs = [(20, 0.8), (20, 1.0), (50, 0.8), (50, 1.0)]
-    for ema, mult in atr_cfgs:
-        name = f"ATR突破_EMA{ema}_{mult}"
-        s[name] = signal_from_conditions(
+    for ema, mult in [(20, 0.8), (20, 1.0), (50, 0.8), (50, 1.0)]:
+        s[f"ATR突破_EMA{ema}_{mult}"] = signal_from_conditions(
             df["close"] > (df[f"ema_{ema}"] + df["atr_14"] * mult),
             df["close"] < (df[f"ema_{ema}"] - df["atr_14"] * mult)
         )
 
-    # 7) RSI 极端反转
-    reversion_cfgs = [(20, 80), (25, 75), (30, 70)]
-    for low, high in reversion_cfgs:
-        name = f"RSI反转_{low}_{high}"
-        s[name] = signal_from_conditions(
+    for low, high in [(20, 80), (25, 75), (30, 70)]:
+        s[f"RSI反转_{low}_{high}"] = signal_from_conditions(
             df["rsi_7"] < low,
             df["rsi_7"] > high
         )
 
-    # 8) 偏离 EMA 的均值回归
-    dist_cfgs = [(20, 0.015), (20, 0.02), (50, 0.02), (50, 0.03)]
-    for ema, dist in dist_cfgs:
-        name = f"偏离EMA{ema}_反转_{dist}"
+    for ema, dist in [(20, 0.015), (20, 0.02), (50, 0.02), (50, 0.03)]:
         dist_col = f"dist_ema{ema}"
-        s[name] = signal_from_conditions(
+        s[f"偏离EMA{ema}_反转_{dist}"] = signal_from_conditions(
             df[dist_col] < -dist,
             df[dist_col] > dist
         )
 
-    # 9) Donchian 趋势突破
     for n in [20, 55]:
-        name = f"Donchian突破_{n}"
-        s[name] = signal_from_conditions(
+        s[f"Donchian突破_{n}"] = signal_from_conditions(
             df["close"] > df[f"donchian_high_{n}"],
             df["close"] < df[f"donchian_low_{n}"]
         )
 
-    # 10) Bollinger 均值回归
-    bb_cfgs = [(20, 2.0)]
-    for period, std_mult in bb_cfgs:
-        name = f"Bollinger反转_{period}_{std_mult}"
-        s[name] = signal_from_conditions(
-            df["close"] < df["bb_lower_20"],
-            df["close"] > df["bb_upper_20"]
-        )
+    s["Bollinger反转_20_2.0"] = signal_from_conditions(
+        df["close"] < df["bb_lower_20"],
+        df["close"] > df["bb_upper_20"]
+    )
 
-    # 11) 低位修复 / 高位衰退
-    name = "低位修复_RSI_MACD"
-    s[name] = signal_from_conditions(
+    s["低位修复_RSI_MACD"] = signal_from_conditions(
         (df["rsi_7"] < 30) & (df["macd_hist"] > df["macd_hist"].shift(1)),
         (df["rsi_7"] > 70) & (df["macd_hist"] < df["macd_hist"].shift(1))
     )
 
-    # 12) 多因子共振
     s["多因子共振_趋势版"] = signal_from_conditions(
         (df["close"] > df["ema_200"]) &
         (df["ema_20"] > df["ema_50"]) &
@@ -409,7 +411,6 @@ def generate_strategies(df: pd.DataFrame):
         (df["base_vol"] > df["vol_ma_20"] * 1.2)
     )
 
-    # 13) 价格站上双均线
     s["价格站上双均线_20_50"] = signal_from_conditions(
         (df["close"] > df["ema_20"]) & (df["close"] > df["ema_50"]),
         (df["close"] < df["ema_20"]) & (df["close"] < df["ema_50"])
@@ -420,7 +421,6 @@ def generate_strategies(df: pd.DataFrame):
         (df["close"] < df["ema_50"]) & (df["close"] < df["ema_200"])
     )
 
-    # 去掉全空策略
     cleaned = {}
     for k, v in s.items():
         sig = pd.Series(v, index=df.index).fillna(0)
@@ -460,7 +460,6 @@ def calc_equity_metrics(net_ret: pd.Series, annual_factor: float):
 def run_backtest(df: pd.DataFrame, signal: pd.Series, fee_rate=0.0006, slippage_rate=0.0002, annual_factor=72576):
     signal = pd.Series(signal, index=df.index).fillna(0)
 
-    # 持仓延续直到反向/新信号
     pos = signal.replace(0, np.nan).ffill().fillna(0)
     pos = pos.shift(1).fillna(0)
 
@@ -490,7 +489,7 @@ def run_train_test_backtest(df: pd.DataFrame, signal: pd.Series, interval: str, 
     n = len(df)
     split_idx = int(n * train_ratio)
 
-    if split_idx < 200 or (n - split_idx) < 200:
+    if split_idx < 300 or (n - split_idx) < 300:
         return None
 
     df_train = df.iloc[:split_idx].copy()
@@ -510,16 +509,7 @@ def run_train_test_backtest(df: pd.DataFrame, signal: pd.Series, interval: str, 
     }
 
 
-# =========================================================
-# 专业化评分：不只看收益，还看稳健性
-# =========================================================
 def compute_strategy_score(test_return, test_dd, test_sharpe, win_rate, trades, consistency_bonus):
-    # 更像“老交易员”会看的评分：
-    # - 样本外收益最重要
-    # - 回撤要罚
-    # - Sharpe 奖励
-    # - 胜率适度参考
-    # - 交易次数太少不可信
     score = 0.0
     score += test_return * 1.8
     score += test_sharpe * 8.0
@@ -546,20 +536,22 @@ def backtest_one_symbol(symbol: str, cfg: dict):
     raw = fetch_candles_bitget(
         symbol=symbol,
         interval=cfg["interval"],
-        rounds=cfg["rounds"],
-        limit=cfg["limit"]
+        target_bars=cfg["target_bars"],
+        request_limit=cfg["request_limit"],
+        max_pages=cfg["max_pages"]
     )
 
     if raw.empty or len(raw) < cfg["min_bars_required"]:
         print(f"[{symbol}] 数据不足，跳过。当前K线数: {len(raw)}")
         return None
 
+    print(f"[{symbol}] 抓取完成，最终K线数: {len(raw)}")
+
     df = add_indicators(raw)
     df4h = resample_4h(df)
     strategies = generate_strategies(df)
 
     rows = []
-    strategy_curves = {}
 
     for strategy_name, signal in strategies.items():
         res = run_train_test_backtest(
@@ -598,27 +590,21 @@ def backtest_one_symbol(symbol: str, cfg: dict):
             "symbol": symbol,
             "strategy": strategy_name,
             "bars": len(df),
-
             "train_return_pct": train_r["净收益(%)"],
             "train_dd_pct": train_r["最大回撤(%)"],
             "train_sharpe": train_r["Sharpe"],
-
             "test_return_pct": test_r["净收益(%)"],
             "test_dd_pct": test_r["最大回撤(%)"],
             "test_sharpe": test_r["Sharpe"],
             "test_win_rate_pct": test_r["胜率(%)"],
             "test_trades": test_r["交易次数"],
-
             "full_return_pct": full_r["净收益(%)"],
             "full_dd_pct": full_r["最大回撤(%)"],
             "full_sharpe": full_r["Sharpe"],
             "full_win_rate_pct": full_r["胜率(%)"],
             "full_trades": full_r["交易次数"],
-
             "score": score
         })
-
-        strategy_curves[(symbol, strategy_name)] = full_r["最终资金曲线"]
 
     if not rows:
         return None
@@ -646,10 +632,8 @@ def backtest_one_symbol(symbol: str, cfg: dict):
 
     return {
         "symbol": symbol,
-        "raw_df": df,
         "result_df": result_df,
-        "snapshot": snapshot,
-        "curves": strategy_curves
+        "snapshot": snapshot
     }
 
 
@@ -719,22 +703,22 @@ def save_reports(combined_detail_df, overall_df, per_symbol_best_df, snapshots):
     }
 
 
-def build_summary_text(cfg, combined_detail_df, overall_df, per_symbol_best_df, paths):
+def build_summary_text(cfg, overall_df, per_symbol_best_df, paths):
     lines = []
     lines.append(f"[{VERSION}]")
     lines.append(f"运行时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append(f"回测币对: {', '.join(cfg['symbols'])}")
     lines.append(f"周期: {cfg['interval']}")
-    lines.append(f"单币抓取轮数: {cfg['rounds']}")
-    lines.append(f"单轮上限: {cfg['limit']}")
+    lines.append(f"目标K线数: {cfg['target_bars']}")
+    lines.append(f"单次请求上限: {cfg['request_limit']}")
+    lines.append(f"最大翻页数: {cfg['max_pages']}")
     lines.append(f"手续费: {cfg['fee_rate']}")
     lines.append(f"滑点: {cfg['slippage_rate']}")
     lines.append(f"样本内比例: {cfg['train_ratio']}")
     lines.append("=" * 130)
 
     lines.append("【多币对综合最佳策略 Top 15】")
-    show_overall = overall_df.head(15).copy()
-    show_overall = show_overall.rename(columns={
+    show_overall = overall_df.head(15).copy().rename(columns={
         "strategy": "策略名称",
         "symbols_tested": "测试币数",
         "robustness_score": "综合鲁棒评分",
@@ -744,6 +728,7 @@ def build_summary_text(cfg, combined_detail_df, overall_df, per_symbol_best_df, 
         "positive_test_symbols": "样本外盈利币数",
         "positive_sharpe_symbols": "正Sharpe币数",
     })
+
     show_overall = show_overall[[
         "策略名称", "测试币数", "综合鲁棒评分", "平均样本外收益(%)",
         "平均样本外回撤(%)", "平均样本外Sharpe", "样本外盈利币数", "正Sharpe币数"
@@ -770,6 +755,7 @@ def build_summary_text(cfg, combined_detail_df, overall_df, per_symbol_best_df, 
         "full_sharpe": "全样本Sharpe",
         "score": "综合评分",
     })
+
     show_best = show_best[[
         "币对", "策略名称", "综合评分", "样本外收益(%)", "样本外回撤(%)",
         "样本外Sharpe", "全样本收益(%)", "全样本回撤(%)", "全样本Sharpe"
@@ -782,18 +768,6 @@ def build_summary_text(cfg, combined_detail_df, overall_df, per_symbol_best_df, 
         show_best,
         right_align_cols={"综合评分", "样本外收益(%)", "样本外回撤(%)", "样本外Sharpe", "全样本收益(%)", "全样本回撤(%)", "全样本Sharpe"}
     ))
-
-    lines.append("")
-    lines.append("【专业结论】")
-    if not overall_df.empty:
-        best = overall_df.iloc[0]
-        lines.append(f"更稳的综合最优策略: {best['strategy']}")
-        lines.append(f"它不是单纯收益最高，而是综合了多币对、样本外表现、回撤与Sharpe之后最靠前。")
-        lines.append(f"平均样本外收益: {best['avg_test_return_pct']:.2f}%")
-        lines.append(f"平均样本外回撤: {best['avg_test_dd_pct']:.2f}%")
-        lines.append(f"平均样本外Sharpe: {best['avg_test_sharpe']:.2f}")
-        lines.append(f"样本外盈利币对数: {int(best['positive_test_symbols'])}/{int(best['symbols_tested'])}")
-        lines.append("这类策略更接近能长期用的框架，而不是只在单一阶段好看。")
 
     lines.append("")
     lines.append("【输出文件】")
@@ -837,7 +811,7 @@ def main():
 
     paths = save_reports(combined_detail_df, overall_df, per_symbol_best_df, snapshots)
 
-    summary_text = build_summary_text(CONFIG, combined_detail_df, overall_df, per_symbol_best_df, paths)
+    summary_text = build_summary_text(CONFIG, overall_df, per_symbol_best_df, paths)
 
     with open(paths["summary_txt"], "w", encoding="utf-8") as f:
         f.write(summary_text)

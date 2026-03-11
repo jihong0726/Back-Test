@@ -1,46 +1,46 @@
-Version: V10_LIVE_ENGINE
-Generated At: 2026-03-11 08:24:43 UTC
+Version: V10_LIVE_ENGINE_TELEGRAM
+Generated At: 2026-03-11 08:39:22 UTC
 
 === MARKET STATES ===
-  symbol     market       close    rsi7  vwap_dev_pct  ema_dev_pct
- BTCUSDT      RANGE 69508.00000 28.7633        1.1102      -0.2140
- ETHUSDT      RANGE  2010.85000 35.8752        0.4280      -0.1994
- SOLUSDT      RANGE    85.16300 27.8912        0.3740      -0.4334
- XRPUSDT      RANGE     1.37400 33.3333        0.0099      -0.2437
-DOGEUSDT      RANGE     0.09186 69.2308       -0.0921      -0.0806
- BNBUSDT      RANGE   640.26000 63.6364        1.4644      -0.0757
- ADAUSDT TREND_DOWN     0.25720 50.0000       -0.4357      -0.2616
-AVAXUSDT      RANGE     9.49700 34.7826        2.7634      -0.3456
-LINKUSDT      RANGE     8.88800 44.4444        0.4451      -0.1680
- LTCUSDT      RANGE    53.68000 20.0000       -0.2150      -0.1971
- APTUSDT      RANGE     0.94070 53.6585       -1.7028      -0.1089
- SUIUSDT      RANGE     0.94740 28.0000        1.8364      -0.2113
- ARBUSDT      RANGE     0.09830 50.0000       -0.1196       0.1372
-  OPUSDT      RANGE     0.11890 50.0000       -0.2626       0.2153
-ATOMUSDT      RANGE     1.81260 70.0000        2.1522       0.2009
-NEARUSDT      RANGE     1.27690 50.3817        2.2503      -0.1458
- DOTUSDT      RANGE     1.48800 50.0000        0.1547       0.0556
- FILUSDT   TREND_UP     0.87350 30.2632       -6.5367       0.2990
- INJUSDT      RANGE     2.91500 38.4615        0.6783      -0.2537
+  symbol   market       close    rsi7  vwap_dev_pct  ema_dev_pct
+ BTCUSDT    RANGE 69566.80000 31.3822        1.1945      -0.0814
+ ETHUSDT    RANGE  2018.80000 68.6671        0.8263       0.1772
+ SOLUSDT    RANGE    85.35200 41.2483        0.6021      -0.1325
+ XRPUSDT    RANGE     1.37570 39.0244        0.1353      -0.0809
+DOGEUSDT    RANGE     0.09206 57.5342        0.1258       0.1271
+ BNBUSDT    RANGE   641.20000 59.3525        1.6149       0.0686
+ ADAUSDT    RANGE     0.25760 47.3684       -0.2780      -0.0711
+AVAXUSDT    RANGE     9.53800 58.2418        3.1962       0.0845
+LINKUSDT    RANGE     8.90900 60.9375        0.6815       0.0773
+ LTCUSDT    RANGE    53.83000 50.0000        0.0669       0.0732
+ APTUSDT    RANGE     0.93940 35.3846       -1.8366      -0.1952
+ SUIUSDT    RANGE     0.94830 50.0000        1.9304      -0.0765
+ ARBUSDT    RANGE     0.09820 57.1429       -0.2167       0.0086
+  OPUSDT    RANGE     0.11870 57.1429       -0.4249       0.0412
+ATOMUSDT    RANGE     1.81150 51.2438        2.0895       0.1192
+NEARUSDT    RANGE     1.27220 39.5722        1.8717      -0.3669
+ DOTUSDT    RANGE     1.48900 66.6667        0.2230       0.1062
+ FILUSDT TREND_UP     0.87820 62.3188       -6.0161       0.6793
+ INJUSDT    RANGE     2.91400 15.3846        0.6406      -0.2137
 
 === OPEN POSITIONS ===
   symbol  side strategy  entry       tp       sl  size  partial_taken               opened_at
 ATOMUSDT SHORT VWAP_2.0 1.8126 1.774411 1.817536   1.0          False 2026-03-11 08:24:43 UTC
- FILUSDT  LONG VWAP_2.5 0.8687 0.936520 0.870896   0.5           True 2026-03-11 07:08:34 UTC
-NEARUSDT SHORT VWAP_2.5 1.2859 1.249132 1.278764   0.5           True 2026-03-11 07:08:34 UTC
- SUIUSDT SHORT VWAP_2.0 0.9525 0.930340 0.949406   0.5           True 2026-03-11 07:08:34 UTC
-AVAXUSDT SHORT VWAP_2.5 9.5950 9.241825 9.529938   0.5           True 2026-03-11 07:08:34 UTC
+ FILUSDT  LONG VWAP_2.5 0.8687 0.936520 0.872275   0.5           True 2026-03-11 07:08:34 UTC
+NEARUSDT SHORT VWAP_2.5 1.2859 1.249132 1.276885   0.5           True 2026-03-11 07:08:34 UTC
+ SUIUSDT SHORT VWAP_2.0 0.9525 0.930340 0.949026   0.5           True 2026-03-11 07:08:34 UTC
+ APTUSDT  LONG VWAP_1.5 0.9394 0.956975 0.937564   1.0          False 2026-03-11 08:39:22 UTC
 
 === POSITION DECISIONS ===
                    time    symbol     type  action                                                                                                                                                                            reason  current_price  pnl_pct   market strategy
-2026-03-11 08:24:37 UTC MATICUSDT   SYSTEM   ERROR 400 Client Error: Bad Request for url: https://api.bitget.com/api/v2/mix/market/candles?symbol=MATICUSDT&productType=USDT-FUTURES&granularity=5m&limit=1000&endTime=1773217477321            NaN      NaN      NaN      NaN
-2026-03-11 08:24:43 UTC  ATOMUSDT POSITION   CLOSE                                                                                                                                                                              触发止损         1.8126  -0.3586    RANGE VWAP_1.5
-2026-03-11 08:24:43 UTC   FILUSDT POSITION MOVE_SL                                                                                                                                                                         盈利扩大，上移止损         0.8735   0.5525 TREND_UP VWAP_2.5
-2026-03-11 08:24:43 UTC  NEARUSDT POSITION MOVE_SL                                                                                                                                                                         盈利扩大，下移止损         1.2769   0.7048    RANGE VWAP_2.5
-2026-03-11 08:24:43 UTC   SUIUSDT POSITION MOVE_SL                                                                                                                                                                         盈利扩大，下移止损         0.9474   0.5383    RANGE VWAP_2.0
-2026-03-11 08:24:43 UTC  AVAXUSDT POSITION MOVE_SL                                                                                                                                                                         盈利扩大，下移止损         9.4970   1.0319    RANGE VWAP_2.5
-2026-03-11 08:24:43 UTC  ATOMUSDT    ENTRY    OPEN                                                                                                                                                             RANGE + VWAP_2.0 信号成立         1.8126   0.0000    RANGE VWAP_2.0
+2026-03-11 08:39:18 UTC MATICUSDT   SYSTEM   ERROR 400 Client Error: Bad Request for url: https://api.bitget.com/api/v2/mix/market/candles?symbol=MATICUSDT&productType=USDT-FUTURES&granularity=5m&limit=1000&endTime=1773218357894            NaN      NaN      NaN      NaN
+2026-03-11 08:39:22 UTC  ATOMUSDT POSITION    HOLD                                                                                                                                                                        结构未失效，继续持有         1.8115   0.0607    RANGE VWAP_2.0
+2026-03-11 08:39:22 UTC   FILUSDT POSITION MOVE_SL                                                                                                                                                                         盈利扩大，上移止损         0.8782   1.0936 TREND_UP VWAP_2.5
+2026-03-11 08:39:22 UTC  NEARUSDT POSITION MOVE_SL                                                                                                                                                                         盈利扩大，下移止损         1.2722   1.0769    RANGE VWAP_2.5
+2026-03-11 08:39:22 UTC   SUIUSDT POSITION MOVE_SL                                                                                                                                                                         盈利扩大，下移止损         0.9483   0.4429    RANGE VWAP_2.0
+2026-03-11 08:39:22 UTC  AVAXUSDT POSITION   CLOSE                                                                                                                                                                              触发止损         9.5380   0.5976    RANGE VWAP_2.5
+2026-03-11 08:39:22 UTC   APTUSDT    ENTRY    OPEN                                                                                                                                                             RANGE + VWAP_1.5 信号成立         0.9394   0.0000    RANGE VWAP_1.5
 
 === NEW ENTRY SIGNALS ===
-  symbol market strategy action  entry       tp       sl  score  rsi7  vwap_dev_pct  ema_dev_pct               opened_at
-ATOMUSDT  RANGE VWAP_2.0  SHORT 1.8126 1.774411 1.817536  90.21  70.0        2.1522       0.2009 2026-03-11 08:24:43 UTC
+ symbol market strategy action  entry       tp       sl  score    rsi7  vwap_dev_pct  ema_dev_pct               opened_at
+APTUSDT  RANGE VWAP_1.5   LONG 0.9394 0.956975 0.937564  89.72 35.3846       -1.8366      -0.1952 2026-03-11 08:39:22 UTC

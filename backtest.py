@@ -2,31 +2,30 @@ import os
 import json
 import time
 import math
+import shutil
+import zipfile
 import requests
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 import unicodedata
 
-VERSION = "V8.1_多币对_多策略_强化抓数版"
+VERSION = "V8.2_多币对_多策略_强制打包输出版"
 REPORT_DIR = "reports"
 
 CONFIG = {
     "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT"],
     "interval": "5m",
-    "target_bars": 3000,          # 目标抓取K线数
-    "request_limit": 1000,        # Bitget v2 candles 最大 1000
-    "max_pages": 8,               # 最多翻页次数
+    "target_bars": 3000,
+    "request_limit": 1000,
+    "max_pages": 8,
     "fee_rate": 0.0006,
     "slippage_rate": 0.0002,
     "train_ratio": 0.6,
-    "min_bars_required": 1200     # 至少要有这么多K线才回测
+    "min_bars_required": 1200
 }
 
 
-# =========================================================
-# 基础工具
-# =========================================================
 def ensure_dir(path: str):
     os.makedirs(path, exist_ok=True)
 
@@ -101,9 +100,6 @@ def annual_factor_from_interval(interval: str) -> float:
     return 252 * bars_per_day
 
 
-# =========================================================
-# 数据抓取
-# =========================================================
 def interval_to_ms(interval: str) -> int:
     mapping = {
         "1m": 60_000,
@@ -121,9 +117,6 @@ def interval_to_ms(interval: str) -> int:
 
 
 def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", target_bars=3000, request_limit=1000, max_pages=8):
-    """
-    使用 Bitget v2 合约 candles 接口反复往前翻页抓更旧数据。
-    """
     url = "https://api.bitget.com/api/v2/mix/market/candles"
     step_ms = interval_to_ms(interval)
 
@@ -172,9 +165,7 @@ def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", target_bars=3000, requ
             if len(all_rows) >= target_bars:
                 break
 
-            # 往前翻页：取当前最老K线之前
             end_time = oldest_ts - step_ms
-
             time.sleep(0.12)
 
         except Exception as e:
@@ -198,9 +189,6 @@ def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", target_bars=3000, requ
     return df
 
 
-# =========================================================
-# 技术指标
-# =========================================================
 def calc_rsi(series: pd.Series, period=14):
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
@@ -296,9 +284,6 @@ def resample_4h(df: pd.DataFrame) -> pd.DataFrame:
     return df4h
 
 
-# =========================================================
-# 策略生成
-# =========================================================
 def signal_from_conditions(long_cond, short_cond):
     return pd.Series(np.where(long_cond, 1, np.where(short_cond, -1, 0)))
 
@@ -430,9 +415,6 @@ def generate_strategies(df: pd.DataFrame):
     return cleaned
 
 
-# =========================================================
-# 回测
-# =========================================================
 def calc_equity_metrics(net_ret: pd.Series, annual_factor: float):
     net_ret = net_ret.fillna(0)
     equity = (1 + net_ret).cumprod()
@@ -527,9 +509,6 @@ def compute_strategy_score(test_return, test_dd, test_sharpe, win_rate, trades, 
     return score
 
 
-# =========================================================
-# 单币对回测
-# =========================================================
 def backtest_one_symbol(symbol: str, cfg: dict):
     print(f"\n[{VERSION}] 开始处理 {symbol} ...")
 
@@ -637,9 +616,6 @@ def backtest_one_symbol(symbol: str, cfg: dict):
     }
 
 
-# =========================================================
-# 多币对聚合
-# =========================================================
 def aggregate_across_symbols(all_symbol_result_dfs):
     combined = pd.concat(all_symbol_result_dfs, ignore_index=True)
 
@@ -674,9 +650,6 @@ def aggregate_across_symbols(all_symbol_result_dfs):
     return combined, grouped
 
 
-# =========================================================
-# 输出
-# =========================================================
 def save_reports(combined_detail_df, overall_df, per_symbol_best_df, snapshots):
     ensure_dir(REPORT_DIR)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -780,9 +753,55 @@ def build_summary_text(cfg, overall_df, per_symbol_best_df, paths):
     return "\n".join(lines)
 
 
-# =========================================================
-# 主程序
-# =========================================================
+def create_root_exports(paths):
+    exported = {}
+
+    root_summary = "latest_summary.txt"
+    root_best_csv = "best_strategies.csv"
+    root_overall_csv = "overall_ranking.csv"
+    root_detail_csv = "all_strategy_details.csv"
+    root_snapshot_json = "market_snapshots.json"
+    root_zip = "backtest_package.zip"
+    root_manifest = "generated_files.json"
+
+    if os.path.exists(paths["summary_txt"]):
+        shutil.copyfile(paths["summary_txt"], root_summary)
+        exported["latest_summary"] = root_summary
+
+    if os.path.exists(paths["best_csv"]):
+        shutil.copyfile(paths["best_csv"], root_best_csv)
+        exported["best_csv"] = root_best_csv
+
+    if os.path.exists(paths["overall_csv"]):
+        shutil.copyfile(paths["overall_csv"], root_overall_csv)
+        exported["overall_csv"] = root_overall_csv
+
+    if os.path.exists(paths["detail_csv"]):
+        shutil.copyfile(paths["detail_csv"], root_detail_csv)
+        exported["detail_csv"] = root_detail_csv
+
+    if os.path.exists(paths["snapshot_json"]):
+        shutil.copyfile(paths["snapshot_json"], root_snapshot_json)
+        exported["snapshot_json"] = root_snapshot_json
+
+    with zipfile.ZipFile(root_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+        for label, file_path in exported.items():
+            if os.path.exists(file_path):
+                zf.write(file_path, arcname=os.path.basename(file_path))
+
+        for p in paths.values():
+            if os.path.exists(p):
+                zf.write(p, arcname=p)
+
+    exported["zip_package"] = root_zip
+
+    with open(root_manifest, "w", encoding="utf-8") as f:
+        json.dump(exported, f, ensure_ascii=False, indent=2)
+
+    exported["manifest"] = root_manifest
+    return exported
+
+
 def main():
     all_results = []
     snapshots = {}
@@ -796,7 +815,10 @@ def main():
         snapshots[symbol] = one["snapshot"]
 
     if not all_results:
-        print("没有足够数据可以完成回测。")
+        fail_msg = "没有足够数据可以完成回测。"
+        with open("latest_summary.txt", "w", encoding="utf-8") as f:
+            f.write(fail_msg)
+        print(fail_msg)
         return
 
     combined_detail_df, overall_df = aggregate_across_symbols(all_results)
@@ -816,10 +838,13 @@ def main():
     with open(paths["summary_txt"], "w", encoding="utf-8") as f:
         f.write(summary_text)
 
-    with open("latest_summary.txt", "w", encoding="utf-8") as f:
-        f.write(summary_text)
+    root_exports = create_root_exports(paths)
 
     print(summary_text)
+    print("")
+    print("【根目录导出文件】")
+    for k, v in root_exports.items():
+        print(f"- {k}: {v}")
 
 
 if __name__ == "__main__":

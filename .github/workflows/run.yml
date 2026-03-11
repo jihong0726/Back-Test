@@ -11,6 +11,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Show repo files before run
+        run: |
+          echo "=== BEFORE RUN: root ==="
+          pwd
+          ls -lah
+          echo ""
+          echo "=== BEFORE RUN: workflow files ==="
+          find .github -maxdepth 3 -type f | sort || true
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -24,13 +33,46 @@ jobs:
       - name: Run backtest
         run: python backtest.py
 
-      - name: Show generated files
+      - name: Show generated files after run
         run: |
-          echo "=== root ==="
+          echo "=== AFTER RUN: root ==="
           ls -lah
           echo ""
-          echo "=== reports ==="
+          echo "=== AFTER RUN: reports ==="
           ls -lah reports || true
+          echo ""
+          echo "=== AFTER RUN: find important files ==="
+          find . -maxdepth 2 -type f | sort
+          echo ""
+          echo "=== generated_files.json ==="
+          cat generated_files.json || echo "generated_files.json not found"
+
+      - name: Verify expected root files
+        run: |
+          for f in \
+            latest_summary.txt \
+            best_strategies.csv \
+            overall_ranking.csv \
+            all_strategy_details.csv \
+            market_snapshots.json \
+            generated_files.json \
+            backtest_package.zip
+          do
+            if [ -f "$f" ]; then
+              echo "[FOUND] $f"
+            else
+              echo "[MISSING] $f"
+            fi
+          done
+
+      - name: Verify reports files
+        run: |
+          if [ -d "reports" ]; then
+            echo "[FOUND] reports directory"
+            find reports -maxdepth 2 -type f | sort
+          else
+            echo "[MISSING] reports directory"
+          fi
 
       - name: Upload latest summary
         uses: actions/upload-artifact@v4
@@ -69,7 +111,9 @@ jobs:
             all_strategy_details.csv \
             market_snapshots.json \
             generated_files.json \
+            backtest_package.zip \
             reports || true
+          ls -lah backtest_reports_full.zip || true
 
       - name: Upload full zip package
         uses: actions/upload-artifact@v4

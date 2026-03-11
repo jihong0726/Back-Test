@@ -7,21 +7,21 @@ import numpy as np
 import pandas as pd
 import requests
 
-VERSION = "V6.2_Strategy_Lab"
+VERSION = "V6.3_中文策略实验室"
 BASE_URL = "https://api.bitget.com/api/v2/mix/market/candles"
 
 
-def now_str():
+def 当前时间字符串():
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
-def ensure_dir(path: str):
+def 创建目录(path: str):
     os.makedirs(path, exist_ok=True)
 
 
-def ascii_table(df: pd.DataFrame) -> str:
+def 纯ASCII表格(df: pd.DataFrame) -> str:
     if df.empty:
-        return "(empty)"
+        return "(空表)"
 
     cols = list(df.columns)
     rows = [[str(x) for x in row] for row in df.values.tolist()]
@@ -44,8 +44,8 @@ def ascii_table(df: pd.DataFrame) -> str:
     return "\n".join(output)
 
 
-def fetch_safe_5m_data(symbol="BTCUSDT", interval="5m", pages=15, sleep_sec=0.15):
-    print(f"[{VERSION}] fetching {symbol} {interval} data ...")
+def 抓取K线数据(symbol="BTCUSDT", interval="5m", pages=15, sleep_sec=0.15):
+    print(f"[{VERSION}] 正在抓取 {symbol} {interval} 数据...")
 
     end_time = str(int(time.time() * 1000))
     all_data = []
@@ -67,11 +67,11 @@ def fetch_safe_5m_data(symbol="BTCUSDT", interval="5m", pages=15, sleep_sec=0.15
             data = payload.get("data", [])
 
             if not data:
-                print("no more data, stop fetching.")
+                print("没有更多数据，停止抓取。")
                 break
 
             if end_time in seen_end_times:
-                print("duplicate endTime detected, stop fetching.")
+                print("endTime 重复，停止抓取。")
                 break
             seen_end_times.add(end_time)
 
@@ -79,17 +79,17 @@ def fetch_safe_5m_data(symbol="BTCUSDT", interval="5m", pages=15, sleep_sec=0.15
             all_data.extend(data)
 
             if new_end_time == end_time:
-                print("endTime not changed, stop fetching.")
+                print("endTime 未变化，停止抓取。")
                 break
 
             end_time = new_end_time
             time.sleep(sleep_sec)
 
         except requests.RequestException as e:
-            print(f"request failed: {e}")
+            print(f"请求失败: {e}")
             break
         except (ValueError, KeyError, TypeError) as e:
-            print(f"parse failed: {e}")
+            print(f"数据解析失败: {e}")
             break
 
     if not all_data:
@@ -121,7 +121,7 @@ def fetch_safe_5m_data(symbol="BTCUSDT", interval="5m", pages=15, sleep_sec=0.15
     return df
 
 
-def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
+def 计算指标(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     for span in [10, 20, 50, 100, 200]:
@@ -157,117 +157,113 @@ def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["bb_lower_2"] = df["bb_mid"] - 2 * df["bb_std"]
 
     df["ret"] = df["close"].pct_change().fillna(0)
-
     return df
 
 
-def signal_from_conditions(long_cond, short_cond):
+def 条件转信号(long_cond, short_cond):
     return np.where(long_cond, 1, np.where(short_cond, -1, 0))
 
 
-def generate_strategy_library(df: pd.DataFrame):
+def 生成策略库(df: pd.DataFrame):
     strategies = {}
     catalog = []
-
     sid = 1
 
-    def add_strategy(name_cn: str, family: str, params: dict, signal):
+    def 新增策略(name_cn: str, family_cn: str, params: dict, signal):
         nonlocal sid
         strategy_id = f"S{sid:03d}"
         sid += 1
         strategies[strategy_id] = {
             "name_cn": name_cn,
-            "family": family,
+            "family_cn": family_cn,
             "params": params,
             "signal": signal,
         }
         catalog.append(
             {
-                "strategy_id": strategy_id,
-                "name_cn": name_cn,
-                "family": family,
-                "params": str(params),
+                "策略ID": strategy_id,
+                "策略名称": name_cn,
+                "策略分类": family_cn,
+                "参数": str(params),
             }
         )
 
-    # Family A: Trend + RSI + MACD + Volume
-    trend_filters = {
-        "ema20_gt_50": df["ema_20"] > df["ema_50"],
-        "ema20_gt_200": df["ema_20"] > df["ema_200"],
-        "close_gt_200": df["close"] > df["ema_200"],
+    趋势多 = {
+        "ema20上穿ema50": df["ema_20"] > df["ema_50"],
+        "ema20上穿ema200": df["ema_20"] > df["ema_200"],
+        "收盘站上ema200": df["close"] > df["ema_200"],
     }
-    trend_filters_short = {
-        "ema20_gt_50": df["ema_20"] < df["ema_50"],
-        "ema20_gt_200": df["ema_20"] < df["ema_200"],
-        "close_gt_200": df["close"] < df["ema_200"],
+    趋势空 = {
+        "ema20上穿ema50": df["ema_20"] < df["ema_50"],
+        "ema20上穿ema200": df["ema_20"] < df["ema_200"],
+        "收盘站上ema200": df["close"] < df["ema_200"],
     }
 
     rsi_pairs = [(55, 45), (60, 40), (65, 35)]
     macd_modes = {
-        "macd_cross": (df["macd"] > df["macd_signal"], df["macd"] < df["macd_signal"]),
-        "macd_sign": (df["macd"] > 0, df["macd"] < 0),
-        "hist_sign": (df["macd_hist"] > 0, df["macd_hist"] < 0),
+        "MACD金叉死叉": (df["macd"] > df["macd_signal"], df["macd"] < df["macd_signal"]),
+        "MACD零轴上下": (df["macd"] > 0, df["macd"] < 0),
+        "MACD柱体正负": (df["macd_hist"] > 0, df["macd_hist"] < 0),
     }
     volume_modes = {
-        "no_vol_filter": (pd.Series(True, index=df.index), pd.Series(True, index=df.index)),
-        "vol_gt_ma20": (df["base_vol"] > df["vol_ma_20"], df["base_vol"] > df["vol_ma_20"]),
-        "vol_gt_1.5ma20": (df["base_vol"] > df["vol_ma_20"] * 1.5, df["base_vol"] > df["vol_ma_20"] * 1.5),
+        "不加成交量过滤": (pd.Series(True, index=df.index), pd.Series(True, index=df.index)),
+        "成交量大于20均量": (df["base_vol"] > df["vol_ma_20"], df["base_vol"] > df["vol_ma_20"]),
+        "成交量大于1.5倍20均量": (df["base_vol"] > df["vol_ma_20"] * 1.5, df["base_vol"] > df["vol_ma_20"] * 1.5),
     }
 
     for trend_key, (rsi_hi, rsi_lo), macd_key, vol_key in product(
-        trend_filters.keys(), rsi_pairs, macd_modes.keys(), volume_modes.keys()
+        趋势多.keys(), rsi_pairs, macd_modes.keys(), volume_modes.keys()
     ):
         long_cond = (
-            trend_filters[trend_key]
+            趋势多[trend_key]
             & (df["rsi_14"] > rsi_hi)
             & macd_modes[macd_key][0]
             & volume_modes[vol_key][0]
         )
         short_cond = (
-            trend_filters_short[trend_key]
+            趋势空[trend_key]
             & (df["rsi_14"] < rsi_lo)
             & macd_modes[macd_key][1]
             & volume_modes[vol_key][1]
         )
-        add_strategy(
+        新增策略(
             name_cn=f"趋势确认 {trend_key} RSI{rsi_hi}/{rsi_lo} {macd_key} {vol_key}",
-            family="trend_confirm",
+            family_cn="趋势确认类",
             params={
-                "trend": trend_key,
-                "rsi_hi": rsi_hi,
-                "rsi_lo": rsi_lo,
-                "macd": macd_key,
-                "volume": vol_key,
+                "趋势条件": trend_key,
+                "RSI高": rsi_hi,
+                "RSI低": rsi_lo,
+                "MACD模式": macd_key,
+                "成交量模式": vol_key,
             },
-            signal=signal_from_conditions(long_cond, short_cond),
+            signal=条件转信号(long_cond, short_cond),
         )
 
-    # Family B: ATR breakout
-    for atr_mult, trend_key, use_vol in product([0.5, 1.0, 1.5], ["ema20_gt_50", "ema20_gt_200"], [False, True]):
+    for atr_mult, trend_key, use_vol in product([0.5, 1.0, 1.5], ["ema20上穿ema50", "ema20上穿ema200"], [False, True]):
         vol_cond = df["base_vol"] > df["vol_ma_20"] if use_vol else pd.Series(True, index=df.index)
         long_cond = (
             (df["close"] > (df["ema_20"] + atr_mult * df["atr_14"]))
-            & trend_filters[trend_key]
+            & 趋势多[trend_key]
             & vol_cond
         )
         short_cond = (
             (df["close"] < (df["ema_20"] - atr_mult * df["atr_14"]))
-            & trend_filters_short[trend_key]
+            & 趋势空[trend_key]
             & vol_cond
         )
-        add_strategy(
-            name_cn=f"ATR突破 {trend_key} x{atr_mult} vol={use_vol}",
-            family="atr_breakout",
-            params={"trend": trend_key, "atr_mult": atr_mult, "use_vol": use_vol},
-            signal=signal_from_conditions(long_cond, short_cond),
+        新增策略(
+            name_cn=f"ATR突破 {trend_key} 倍数{atr_mult} 成交量过滤={use_vol}",
+            family_cn="ATR突破类",
+            params={"趋势条件": trend_key, "ATR倍数": atr_mult, "成交量过滤": use_vol},
+            signal=条件转信号(long_cond, short_cond),
         )
 
-    # Family C: Mean reversion RSI
     for low, high, with_trend in product([20, 25, 30], [70, 75, 80], [False, True]):
         if low >= high:
             continue
         base_long = df["rsi_14"] < low
         base_short = df["rsi_14"] > high
+
         if with_trend:
             long_cond = base_long & (df["close"] > df["ema_200"])
             short_cond = base_short & (df["close"] < df["ema_200"])
@@ -275,97 +271,95 @@ def generate_strategy_library(df: pd.DataFrame):
             long_cond = base_long
             short_cond = base_short
 
-        add_strategy(
-            name_cn=f"RSI均值回归 {low}/{high} trend={with_trend}",
-            family="rsi_mean_revert",
-            params={"low": low, "high": high, "with_trend": with_trend},
-            signal=signal_from_conditions(long_cond, short_cond),
+        新增策略(
+            name_cn=f"RSI均值回归 {low}/{high} 趋势过滤={with_trend}",
+            family_cn="RSI均值回归类",
+            params={"RSI低点": low, "RSI高点": high, "趋势过滤": with_trend},
+            signal=条件转信号(long_cond, short_cond),
         )
 
-    # Family D: Bollinger mean reversion
     for with_trend in [False, True]:
         long_cond = df["close"] < df["bb_lower_2"]
         short_cond = df["close"] > df["bb_upper_2"]
+
         if with_trend:
             long_cond = long_cond & (df["close"] > df["ema_200"])
             short_cond = short_cond & (df["close"] < df["ema_200"])
 
-        add_strategy(
-            name_cn=f"布林回归 trend={with_trend}",
-            family="bollinger_revert",
-            params={"with_trend": with_trend},
-            signal=signal_from_conditions(long_cond, short_cond),
+        新增策略(
+            name_cn=f"布林带回归 趋势过滤={with_trend}",
+            family_cn="布林回归类",
+            params={"趋势过滤": with_trend},
+            signal=条件转信号(long_cond, short_cond),
         )
 
-    # Family E: EMA distance grid
     for pct, base in product([0.005, 0.01, 0.015, 0.02], ["ema_20", "ema_50"]):
         long_cond = df["close"] < df[base] * (1 - pct)
         short_cond = df["close"] > df[base] * (1 + pct)
-        add_strategy(
-            name_cn=f"均线偏离 {base} {pct:.3f}",
-            family="ema_distance",
-            params={"base": base, "pct": pct},
-            signal=signal_from_conditions(long_cond, short_cond),
+        新增策略(
+            name_cn=f"均线偏离 {base} 偏离{pct:.3f}",
+            family_cn="均线偏离类",
+            params={"基础均线": base, "偏离比例": pct},
+            signal=条件转信号(long_cond, short_cond),
         )
 
-    # Family F: Hybrid filters
     hybrid_configs = [
-        ("close_gt_200", "macd_cross", "vol_gt_ma20", 55, 45),
-        ("ema20_gt_50", "hist_sign", "vol_gt_ma20", 60, 40),
-        ("ema20_gt_200", "macd_sign", "vol_gt_1.5ma20", 55, 45),
-        ("close_gt_200", "hist_sign", "no_vol_filter", 65, 35),
+        ("收盘站上ema200", "MACD金叉死叉", "成交量大于20均量", 55, 45),
+        ("ema20上穿ema50", "MACD柱体正负", "成交量大于20均量", 60, 40),
+        ("ema20上穿ema200", "MACD零轴上下", "成交量大于1.5倍20均量", 55, 45),
+        ("收盘站上ema200", "MACD柱体正负", "不加成交量过滤", 65, 35),
     ]
     for trend_key, macd_key, vol_key, rsi_hi, rsi_lo in hybrid_configs:
         long_cond = (
-            trend_filters[trend_key]
+            趋势多[trend_key]
             & macd_modes[macd_key][0]
             & volume_modes[vol_key][0]
             & (df["rsi_14"] > rsi_hi)
             & (df["close"] > df["ema_20"])
         )
         short_cond = (
-            trend_filters_short[trend_key]
+            趋势空[trend_key]
             & macd_modes[macd_key][1]
             & volume_modes[vol_key][1]
             & (df["rsi_14"] < rsi_lo)
             & (df["close"] < df["ema_20"])
         )
-        add_strategy(
-            name_cn=f"混合共振 {trend_key} {macd_key} {vol_key} {rsi_hi}/{rsi_lo}",
-            family="hybrid",
+        新增策略(
+            name_cn=f"混合共振 {trend_key} {macd_key} {vol_key} RSI{rsi_hi}/{rsi_lo}",
+            family_cn="混合共振类",
             params={
-                "trend": trend_key,
-                "macd": macd_key,
-                "volume": vol_key,
-                "rsi_hi": rsi_hi,
-                "rsi_lo": rsi_lo,
+                "趋势条件": trend_key,
+                "MACD模式": macd_key,
+                "成交量模式": vol_key,
+                "RSI高": rsi_hi,
+                "RSI低": rsi_lo,
             },
-            signal=signal_from_conditions(long_cond, short_cond),
+            signal=条件转信号(long_cond, short_cond),
         )
 
     return strategies, pd.DataFrame(catalog)
 
 
-def calculate_max_drawdown(equity_curve: pd.Series) -> float:
+def 最大回撤(equity_curve: pd.Series) -> float:
     rolling_max = equity_curve.cummax()
     drawdown = equity_curve / rolling_max - 1
     return float(drawdown.min())
 
 
-def calculate_sharpe(net_ret: pd.Series, bars_per_year=12 * 24 * 365) -> float:
+def 夏普(net_ret: pd.Series, bars_per_year=12 * 24 * 365) -> float:
     std = net_ret.std()
     if std == 0 or pd.isna(std):
         return 0.0
     return float((net_ret.mean() / std) * np.sqrt(bars_per_year))
 
 
-def calculate_calmar(total_return: float, max_dd: float) -> float:
+def 卡玛(total_return: float, max_dd: float) -> float:
     if max_dd == 0:
         return 0.0
     return float(total_return / abs(max_dd))
 
 
-def backtest_one_strategy(df: pd.DataFrame, signal, fee_rate=0.0006, slippage=0.0002):
+def 回测单策略(df: pd.DataFrame, signal, fee_rate=0.0006, slippage=0.0002):
     raw_signal = pd.Series(signal, index=df.index)
 
     pos = raw_signal.replace(0, np.nan).ffill().fillna(0)
@@ -379,12 +373,12 @@ def backtest_one_strategy(df: pd.DataFrame, signal, fee_rate=0.0006, slippage=0.
     equity_curve = (1 + net_ret).cumprod()
 
     total_return = float(equity_curve.iloc[-1] - 1)
-    max_dd = calculate_max_drawdown(equity_curve)
-    sharpe = calculate_sharpe(net_ret)
-    calmar = calculate_calmar(total_return, max_dd)
+    max_dd = 最大回撤(equity_curve)
+    sharpe = 夏普(net_ret)
+    calmar = 卡玛(total_return, max_dd)
 
-    trade_entries = int(((pos != 0) & (pos.shift(1).fillna(0) == 0)).sum())
-    direction_changes = int(((pos * pos.shift(1).fillna(0)) < 0).sum())
+    entries = int(((pos != 0) & (pos.shift(1).fillna(0) == 0)).sum())
+    flips = int(((pos * pos.shift(1).fillna(0)) < 0).sum())
     exposure = float((pos != 0).mean())
 
     non_zero_ret = net_ret[net_ret != 0]
@@ -403,152 +397,99 @@ def backtest_one_strategy(df: pd.DataFrame, signal, fee_rate=0.0006, slippage=0.
         "net_ret": net_ret,
         "equity_curve": equity_curve,
         "summary": {
-            "return_pct": total_return * 100,
-            "maxdd_pct": max_dd * 100,
-            "sharpe": sharpe,
-            "calmar": calmar,
-            "entries": trade_entries,
-            "flips": direction_changes,
-            "exposure_pct": exposure * 100,
-            "winrate_pct": win_rate * 100,
-            "pnl_ratio": pnl_ratio,
+            "收益率(%)": total_return * 100,
+            "最大回撤(%)": max_dd * 100,
+            "夏普值": sharpe,
+            "卡玛值": calmar,
+            "开仓次数": entries,
+            "反手次数": flips,
+            "持仓占比(%)": exposure * 100,
+            "胜率(%)": win_rate * 100,
+            "盈亏比": pnl_ratio,
         },
     }
 
 
-def add_score(report: pd.DataFrame) -> pd.DataFrame:
+def 计算综合评分(report: pd.DataFrame) -> pd.DataFrame:
     df = report.copy()
-
-    df["score"] = (
-        df["return_pct"] * 0.45
-        + df["sharpe"] * 2.0
-        + df["calmar"] * 8.0
-        + df["winrate_pct"] * 0.03
-        + df["pnl_ratio"] * 4.0
-        - df["maxdd_pct"].abs() * 0.35
+    df["综合评分"] = (
+        df["收益率(%)"] * 0.45
+        + df["夏普值"] * 2.0
+        + df["卡玛值"] * 8.0
+        + df["胜率(%)"] * 0.03
+        + df["盈亏比"] * 4.0
+        - df["最大回撤(%)"].abs() * 0.35
     )
     return df
 
 
-def run_strategy_lab(df, fee_rate=0.0006, slippage=0.0002):
-    df = calculate_indicators(df)
-    strategies, catalog_df = generate_strategy_library(df)
+def 跑策略实验室(df, fee_rate=0.0006, slippage=0.0002):
+    df = 计算指标(df)
+    strategies, catalog_df = 生成策略库(df)
 
     results = []
-    equity_table = pd.DataFrame({"timestamp": df["timestamp"]})
+    equity_table = pd.DataFrame({"时间": df["timestamp"]})
 
     for strategy_id, meta in strategies.items():
-        result = backtest_one_strategy(df, meta["signal"], fee_rate=fee_rate, slippage=slippage)
+        result = 回测单策略(df, meta["signal"], fee_rate=fee_rate, slippage=slippage)
         summary = result["summary"]
-        summary["strategy_id"] = strategy_id
-        summary["family"] = meta["family"]
-        summary["name_cn"] = meta["name_cn"]
+        summary["策略ID"] = strategy_id
+        summary["策略分类"] = meta["family_cn"]
+        summary["策略名称"] = meta["name_cn"]
         results.append(summary)
         equity_table[strategy_id] = result["equity_curve"].values
 
     report = pd.DataFrame(results)
-    report = add_score(report)
-    report = report.sort_values(by="score", ascending=False).reset_index(drop=True)
+    report = 计算综合评分(report)
+    report = report.sort_values(by="综合评分", ascending=False).reset_index(drop=True)
 
     benchmark = ((1 + df["ret"]).cumprod().iloc[-1] - 1) * 100
     return report, benchmark, equity_table, catalog_df
 
 
-def build_console_report(report: pd.DataFrame, top_n=20):
+def 构建控制台报表(report: pd.DataFrame, top_n=20):
     view = report.head(top_n).copy()
-
-    cols = [
-        "strategy_id",
-        "family",
-        "return_pct",
-        "maxdd_pct",
-        "sharpe",
-        "calmar",
-        "entries",
-        "flips",
-        "exposure_pct",
-        "winrate_pct",
-        "pnl_ratio",
-        "score",
+    view = view[
+        [
+            "策略ID",
+            "策略分类",
+            "收益率(%)",
+            "最大回撤(%)",
+            "夏普值",
+            "卡玛值",
+            "开仓次数",
+            "反手次数",
+            "持仓占比(%)",
+            "胜率(%)",
+            "盈亏比",
+            "综合评分",
+        ]
     ]
-    view = view[cols]
 
-    rename_map = {
-        "strategy_id": "ID",
-        "family": "Family",
-        "return_pct": "Return%",
-        "maxdd_pct": "MaxDD%",
-        "sharpe": "Sharpe",
-        "calmar": "Calmar",
-        "entries": "Entries",
-        "flips": "Flips",
-        "exposure_pct": "Exposure%",
-        "winrate_pct": "WinRate%",
-        "pnl_ratio": "PnLRatio",
-        "score": "Score",
-    }
-    view = view.rename(columns=rename_map)
-
-    for col in ["Return%", "MaxDD%", "Exposure%", "WinRate%"]:
+    for col in ["收益率(%)", "最大回撤(%)", "持仓占比(%)", "胜率(%)"]:
         view[col] = view[col].map(lambda x: f"{x:.2f}%")
 
-    for col in ["Sharpe", "Calmar", "PnLRatio", "Score"]:
+    for col in ["夏普值", "卡玛值", "盈亏比", "综合评分"]:
         view[col] = view[col].map(lambda x: f"{x:.2f}")
 
     return view
 
 
-def build_markdown_report(report: pd.DataFrame, benchmark: float, top_n=30) -> str:
+def 构建Markdown报告(report: pd.DataFrame, benchmark: float, top_n=30) -> str:
     best = report.iloc[0]
 
     md = []
-    md.append(f"# {VERSION} Backtest Report")
+    md.append(f"# {VERSION} 回测报告")
     md.append("")
-    md.append(f"- Generated At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    md.append(f"- Benchmark: {benchmark:.2f}%")
-    md.append(f"- Total Strategies: {len(report)}")
-    md.append(f"- Best Strategy ID: {best['strategy_id']}")
-    md.append(f"- Best Strategy Name: {best['name_cn']}")
-    md.append(f"- Best Score: {best['score']:.2f}")
+    md.append(f"- 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    md.append(f"- 基准收益: {benchmark:.2f}%")
+    md.append(f"- 策略总数: {len(report)}")
+    md.append(f"- 最佳策略ID: {best['策略ID']}")
+    md.append(f"- 最佳策略名称: {best['策略名称']}")
+    md.append(f"- 最佳综合评分: {best['综合评分']:.2f}")
     md.append("")
 
     top_view = report.head(top_n).copy()
-    top_view = top_view[
-        [
-            "strategy_id",
-            "family",
-            "name_cn",
-            "return_pct",
-            "maxdd_pct",
-            "sharpe",
-            "calmar",
-            "entries",
-            "flips",
-            "exposure_pct",
-            "winrate_pct",
-            "pnl_ratio",
-            "score",
-        ]
-    ]
-
-    top_view = top_view.rename(
-        columns={
-            "strategy_id": "ID",
-            "family": "Family",
-            "name_cn": "StrategyName",
-            "return_pct": "Return%",
-            "maxdd_pct": "MaxDD%",
-            "sharpe": "Sharpe",
-            "calmar": "Calmar",
-            "entries": "Entries",
-            "flips": "Flips",
-            "exposure_pct": "Exposure%",
-            "winrate_pct": "WinRate%",
-            "pnl_ratio": "PnLRatio",
-            "score": "Score",
-        }
-    )
-
     try:
         md.append(top_view.to_markdown(index=False, floatfmt=".2f"))
     except Exception:
@@ -558,41 +499,41 @@ def build_markdown_report(report: pd.DataFrame, benchmark: float, top_n=30) -> s
     return "\n".join(md)
 
 
-def save_outputs(report, benchmark, equity_table, catalog_df, console_report, symbol, interval):
-    ts = now_str()
+def 保存输出(report, benchmark, equity_table, catalog_df, console_report, symbol, interval):
+    ts = 当前时间字符串()
     out_dir = os.path.join("outputs", ts)
-    ensure_dir(out_dir)
+    创建目录(out_dir)
 
-    report_path = os.path.join(out_dir, f"report_{symbol}_{interval}_{ts}.csv")
-    equity_path = os.path.join(out_dir, f"equity_curves_{symbol}_{interval}_{ts}.csv")
-    catalog_path = os.path.join(out_dir, f"strategy_catalog_{symbol}_{interval}_{ts}.csv")
-    summary_txt_path = os.path.join(out_dir, f"summary_{symbol}_{interval}_{ts}.txt")
-    summary_md_path = os.path.join(out_dir, f"summary_{symbol}_{interval}_{ts}.md")
+    report_path = os.path.join(out_dir, f"回测结果_{symbol}_{interval}_{ts}.csv")
+    equity_path = os.path.join(out_dir, f"资金曲线_{symbol}_{interval}_{ts}.csv")
+    catalog_path = os.path.join(out_dir, f"策略目录_{symbol}_{interval}_{ts}.csv")
+    summary_txt_path = os.path.join(out_dir, f"回测摘要_{symbol}_{interval}_{ts}.txt")
+    summary_md_path = os.path.join(out_dir, f"回测摘要_{symbol}_{interval}_{ts}.md")
 
     report.to_csv(report_path, index=False, encoding="utf-8-sig")
     equity_table.to_csv(equity_path, index=False, encoding="utf-8-sig")
     catalog_df.to_csv(catalog_path, index=False, encoding="utf-8-sig")
 
     with open(summary_txt_path, "w", encoding="utf-8-sig") as f:
-        f.write(f"[{VERSION}] Strategy Lab\n")
-        f.write(f"Generated At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"Symbol: {symbol}\n")
-        f.write(f"Interval: {interval}\n")
-        f.write(f"Benchmark: {benchmark:.2f}%\n")
-        f.write(f"Total Strategies: {len(report)}\n\n")
-        f.write(ascii_table(console_report))
+        f.write(f"[{VERSION}] 中文策略实验室\n")
+        f.write(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"交易对: {symbol}\n")
+        f.write(f"周期: {interval}\n")
+        f.write(f"基准收益: {benchmark:.2f}%\n")
+        f.write(f"策略总数: {len(report)}\n\n")
+        f.write(纯ASCII表格(console_report))
         f.write("\n")
 
     with open(summary_md_path, "w", encoding="utf-8-sig") as f:
-        f.write(build_markdown_report(report, benchmark, top_n=30))
+        f.write(构建Markdown报告(report, benchmark, top_n=30))
 
     return {
-        "out_dir": out_dir,
-        "report_path": report_path,
-        "equity_path": equity_path,
-        "catalog_path": catalog_path,
-        "summary_txt_path": summary_txt_path,
-        "summary_md_path": summary_md_path,
+        "输出目录": out_dir,
+        "回测结果文件": report_path,
+        "资金曲线文件": equity_path,
+        "策略目录文件": catalog_path,
+        "摘要TXT文件": summary_txt_path,
+        "摘要MD文件": summary_md_path,
     }
 
 
@@ -604,27 +545,27 @@ if __name__ == "__main__":
     SLIPPAGE = 0.0002
     TOP_N_CONSOLE = 20
 
-    df = fetch_safe_5m_data(symbol=SYMBOL, interval=INTERVAL, pages=PAGES)
+    df = 抓取K线数据(symbol=SYMBOL, interval=INTERVAL, pages=PAGES)
 
     if df.empty:
-        print("no data fetched.")
+        print("没有成功获取到数据。")
     else:
-        report, benchmark, equity_table, catalog_df = run_strategy_lab(
+        report, benchmark, equity_table, catalog_df = 跑策略实验室(
             df=df,
             fee_rate=FEE_RATE,
             slippage=SLIPPAGE,
         )
 
-        console_report = build_console_report(report, top_n=TOP_N_CONSOLE)
+        console_report = 构建控制台报表(report, top_n=TOP_N_CONSOLE)
 
-        print(f"\n[{VERSION}] Strategy Lab Result")
-        print(f"Generated At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"Benchmark: {benchmark:.2f}%")
-        print(f"Total Strategies: {len(report)}")
+        print(f"\n[{VERSION}] 策略实验室结果")
+        print(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"基准收益: {benchmark:.2f}%")
+        print(f"策略总数: {len(report)}")
         print()
-        print(ascii_table(console_report))
+        print(纯ASCII表格(console_report))
 
-        paths = save_outputs(
+        paths = 保存输出(
             report=report,
             benchmark=benchmark,
             equity_table=equity_table,
@@ -635,14 +576,14 @@ if __name__ == "__main__":
         )
 
         best = report.iloc[0]
-        print("\nBest Strategy")
-        print(f"- ID: {best['strategy_id']}")
-        print(f"- Name: {best['name_cn']}")
-        print(f"- Score: {best['score']:.2f}")
-        print(f"- Return: {best['return_pct']:.2f}%")
-        print(f"- MaxDD: {best['maxdd_pct']:.2f}%")
-        print(f"- Sharpe: {best['sharpe']:.2f}")
+        print("\n最佳策略")
+        print(f"- 策略ID: {best['策略ID']}")
+        print(f"- 策略名称: {best['策略名称']}")
+        print(f"- 综合评分: {best['综合评分']:.2f}")
+        print(f"- 收益率: {best['收益率(%)']:.2f}%")
+        print(f"- 最大回撤: {best['最大回撤(%)']:.2f}%")
+        print(f"- 夏普值: {best['夏普值']:.2f}")
 
-        print("\nSaved Files")
+        print("\n已保存文件")
         for k, v in paths.items():
             print(f"- {k}: {v}")

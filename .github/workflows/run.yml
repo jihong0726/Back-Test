@@ -1,9 +1,12 @@
-name: 极简回测引擎
+name: 多市场策略实验室
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   run-backtest:

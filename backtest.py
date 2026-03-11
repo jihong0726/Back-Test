@@ -5,14 +5,14 @@ import time
 import os
 from datetime import datetime
 
-VERSION = "V8.3_STABLE"
+VERSION = "V8.3_STABLE_FIX2"
 
 CONFIG = {
-    "symbols": ["BTCUSDT","ETHUSDT","SOLUSDT","XRPUSDT","BNBUSDT","DOGEUSDT"],
+    "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT"],
     "interval": "5m",
     "bars": 3000,
     "fee": 0.0006,
-    "slippage": 0.0002
+    "slippage": 0.0002,
 }
 
 REPORT_DIR = "reports"
@@ -25,120 +25,151 @@ def ensure_dir():
 # -------------------------------------------------
 # 数据抓取
 # -------------------------------------------------
+def normalize_candle_row(row):
+    """
+    Bitget candle 常见格式：
+    [ts, open, high, low, close, baseVol, quoteVol]
+    有时可能有更多字段，这里只取前 7 个
+    """
+    if not isinstance(row, (list, tuple)) or len(row) < 6:
+        return None
+
+    row = list(row)
+
+    if len(row) >= 7:
+        return row[:7]
+
+    # 若只有 6 个字段，补一个 quote volume 占位
+    return row[:6] + [np.nan]
+
 
 def fetch_bitget(symbol, limit=3000):
-
     url = "https://api.bitget.com/api/v2/mix/market/candles"
 
-    params = {
-        "symbol":symbol,
-        "productType":"USDT-FUTURES",
-        "granularity":"5m",
-        "limit":"1000"
-    }
+    rows = []
+    end_time = int(time.time() * 1000)
 
-    rows=[]
-    end_time=int(time.time()*1000)
+    while len(rows) < limit:
+        params = {
+            "symbol": symbol,
+            "productType": "USDT-FUTURES",
+            "granularity": "5m",
+            "limit": "1000",
+            "endTime": str(end_time),
+        }
 
-    while len(rows)<limit:
+        r = requests.get(url, params=params, timeout=20)
+        r.raise_for_status()
 
-        params["endTime"]=str(end_time)
-
-        r=requests.get(url,params=params,timeout=20)
-        data=r.json().get("data",[])
+        payload = r.json()
+        data = payload.get("data", [])
 
         if not data:
             break
 
-        rows+=data
+        batch = []
+        for item in data:
+            norm = normalize_candle_row(item)
+            if norm is not None:
+                batch.append(norm)
 
-        oldest=min(int(x[0]) for x in data)
-        end_time=oldest-1
+        if not batch:
+            break
+
+        rows.extend(batch)
+
+        oldest = min(int(float(x[0])) for x in batch)
+        end_time = oldest - 1
 
         time.sleep(0.1)
 
-    df=pd.DataFrame(rows,columns=[
-        "timestamp","open","high","low","close","volume","q"
-    ])
+        if len(batch) < 2:
+            break
 
-    for c in ["open","high","low","close","volume"]:
-        df[c]=pd.to_numeric(df[c])
+    if not rows:
+        return pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume", "quote_volume"])
 
-    df["timestamp"]=pd.to_datetime(df["timestamp"],unit="ms")
+    df = pd.DataFrame(
+        rows,
+        columns=["timestamp", "open", "high", "low", "close", "volume", "quote_volume"]
+    )
 
-    df=df.sort_values("timestamp").reset_index(drop=True)
+    # 关键修复：先转 numeric，再转 datetime
+    df["timestamp"] = pd.to_numeric(df["timestamp"], errors="coerce")
 
-    return df.tail(limit)
+    for c in ["open", "high", "low", "close", "volume", "quote_volume"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    df = df.dropna(subset=["timestamp", "open", "high", "low", "close"])
+    df = df.drop_duplicates(subset=["timestamp"]).sort_values("timestamp").reset_index(drop=True)
+
+    # 再转 datetime，避免字符串被直接解析导致溢出
+    df["timestamp"] = pd.to_datetime(df["timestamp"].astype("int64"), unit="ms", errors="coerce")
+    df = df.dropna(subset=["timestamp"]).reset_index(drop=True)
+
+    return df.tail(limit).reset_index(drop=True)
 
 
 # -------------------------------------------------
 # 指标
 # -------------------------------------------------
+def calc_rsi(series, period=14):
+    delta = series.diff()
 
-def calc_rsi(series,period=14):
+    gain = delta.where(delta > 0, 0.0)
+    loss = -delta.where(delta < 0, 0.0)
 
-    delta=series.diff()
+    avg_gain = gain.rolling(period, min_periods=period).mean()
+    avg_loss = loss.rolling(period, min_periods=period).mean()
 
-    gain=(delta.where(delta>0,0)).rolling(period).mean()
-    loss=(-delta.where(delta<0,0)).rolling(period).mean()
-
-    rs=gain/loss
-
-    rsi=100-(100/(1+rs))
+    rs = avg_gain / avg_loss.replace(0, np.nan)
+    rsi = 100 - (100 / (1 + rs))
 
     return rsi.fillna(50)
 
 
-def calc_atr(df,period=14):
+def calc_atr(df, period=14):
+    high = df["high"]
+    low = df["low"]
+    close = df["close"]
 
-    high=df["high"]
-    low=df["low"]
-    close=df["close"]
-
-    tr=np.maximum(
-        high-low,
+    tr = np.maximum(
+        high - low,
         np.maximum(
-            abs(high-close.shift()),
-            abs(low-close.shift())
+            (high - close.shift()).abs(),
+            (low - close.shift()).abs()
         )
     )
 
-    atr=tr.rolling(period).mean()
-
-    return atr
+    atr = tr.rolling(period, min_periods=period).mean()
+    return atr.fillna(method="bfill") if hasattr(atr, "fillna") else atr
 
 
 def calc_vwap(df):
+    price = (df["high"] + df["low"] + df["close"]) / 3
+    pv = price * df["volume"]
 
-    price=(df["high"]+df["low"]+df["close"])/3
-    pv=price*df["volume"]
+    cum_pv = pv.cumsum()
+    cum_vol = df["volume"].replace(0, np.nan).cumsum()
 
-    cum_pv=pv.cumsum()
-    cum_vol=df["volume"].replace(0,np.nan).cumsum()
-
-    vwap=cum_pv/cum_vol
-
-    vwap=vwap.replace([np.inf,-np.inf],np.nan).ffill()
+    vwap = cum_pv / cum_vol
+    vwap = vwap.replace([np.inf, -np.inf], np.nan).ffill()
 
     return vwap
 
 
 def add_indicators(df):
+    df = df.copy()
 
-    df=df.copy()
+    df["ema20"] = df["close"].ewm(span=20, adjust=False).mean()
+    df["ema50"] = df["close"].ewm(span=50, adjust=False).mean()
 
-    df["ema20"]=df["close"].ewm(span=20).mean()
-    df["ema50"]=df["close"].ewm(span=50).mean()
+    df["rsi"] = calc_rsi(df["close"], 7)
+    df["atr"] = calc_atr(df, 14)
+    df["vwap"] = calc_vwap(df)
 
-    df["rsi"]=calc_rsi(df["close"],7)
-
-    df["atr"]=calc_atr(df)
-
-    df["vwap"]=calc_vwap(df)
-
-    df["dist_ema20"]=df["close"]/df["ema20"]-1
-
-    df["dist_vwap"]=df["close"]/df["vwap"]-1
+    df["dist_ema20"] = df["close"] / df["ema20"] - 1
+    df["dist_vwap"] = df["close"] / df["vwap"] - 1
 
     return df
 
@@ -146,25 +177,38 @@ def add_indicators(df):
 # -------------------------------------------------
 # 策略
 # -------------------------------------------------
-
 def generate_strategies(df):
+    s = {}
 
-    s={}
+    s["RSI_20_80"] = np.where(
+        df["rsi"] < 20, 1,
+        np.where(df["rsi"] > 80, -1, 0)
+    )
 
-    s["RSI_20_80"]=np.where(df["rsi"]<20,1,
-                   np.where(df["rsi"]>80,-1,0))
+    s["RSI_25_75"] = np.where(
+        df["rsi"] < 25, 1,
+        np.where(df["rsi"] > 75, -1, 0)
+    )
 
-    s["RSI_25_75"]=np.where(df["rsi"]<25,1,
-                   np.where(df["rsi"]>75,-1,0))
+    s["EMA20_dev_1.5"] = np.where(
+        df["dist_ema20"] < -0.015, 1,
+        np.where(df["dist_ema20"] > 0.015, -1, 0)
+    )
 
-    s["EMA20_dev_1.5"]=np.where(df["dist_ema20"]<-0.015,1,
-                        np.where(df["dist_ema20"]>0.015,-1,0))
+    s["EMA20_dev_2.0"] = np.where(
+        df["dist_ema20"] < -0.02, 1,
+        np.where(df["dist_ema20"] > 0.02, -1, 0)
+    )
 
-    s["EMA20_dev_2"]=np.where(df["dist_ema20"]<-0.02,1,
-                      np.where(df["dist_ema20"]>0.02,-1,0))
+    s["VWAP_1.5"] = np.where(
+        df["dist_vwap"] < -0.015, 1,
+        np.where(df["dist_vwap"] > 0.015, -1, 0)
+    )
 
-    s["VWAP_1.5"]=np.where(df["dist_vwap"]<-0.015,1,
-                    np.where(df["dist_vwap"]>0.015,-1,0))
+    s["VWAP_2.0"] = np.where(
+        df["dist_vwap"] < -0.02, 1,
+        np.where(df["dist_vwap"] > 0.02, -1, 0)
+    )
 
     return s
 
@@ -172,93 +216,90 @@ def generate_strategies(df):
 # -------------------------------------------------
 # 回测
 # -------------------------------------------------
+def backtest(df, signal, fee=0.0006, slippage=0.0002):
+    signal = pd.Series(signal, index=df.index).fillna(0)
 
-def backtest(df,signal):
+    # 信号延续持仓
+    position = signal.replace(0, np.nan).ffill().fillna(0)
+    position = position.shift(1).fillna(0)
 
-    position=0
-    entry=0
+    ret = df["close"].pct_change().fillna(0)
+    gross = position * ret
 
-    returns=[]
+    trades = position.diff().abs().fillna(0)
+    cost = trades * (fee + slippage)
 
-    for i in range(1,len(df)):
+    net = gross - cost
 
-        price=df["close"].iloc[i]
-        prev=df["close"].iloc[i-1]
+    equity = (1 + net).cumprod()
+    total_return = (equity.iloc[-1] - 1) * 100
 
-        if position!=0:
-            ret=position*((price/prev)-1)
-        else:
-            ret=0
+    drawdown = equity / equity.cummax() - 1
+    max_dd = drawdown.min() * 100
 
-        if signal[i-1]!=position:
+    sharpe = 0.0
+    if net.std() not in [0, np.nan] and pd.notna(net.std()) and net.std() > 0:
+        sharpe = net.mean() / net.std() * np.sqrt(252 * 24 * 12)
 
-            position=signal[i-1]
-
-            if position!=0:
-                entry=price
-
-        returns.append(ret)
-
-    r=pd.Series(returns)
-
-    total=(1+r).prod()-1
-
-    dd=((1+r).cumprod()/((1+r).cumprod().cummax())-1).min()
-
-    sharpe=r.mean()/r.std() if r.std()!=0 else 0
-
-    return total*100,dd*100,sharpe
+    return total_return, max_dd, sharpe
 
 
 # -------------------------------------------------
 # 主程序
 # -------------------------------------------------
-
 def main():
-
     ensure_dir()
 
-    summary=[]
+    summary = []
 
     for sym in CONFIG["symbols"]:
+        print("processing", sym)
 
-        print("processing",sym)
+        df = fetch_bitget(sym, CONFIG["bars"])
 
-        df=fetch_bitget(sym,CONFIG["bars"])
+        if df.empty or len(df) < 100:
+            print(f"skip {sym}, insufficient data")
+            continue
 
-        df=add_indicators(df)
+        df = add_indicators(df)
+        strategies = generate_strategies(df)
 
-        strategies=generate_strategies(df)
-
-        for name,signal in strategies.items():
-
-            total,dd,sharpe=backtest(df,signal)
+        for name, signal in strategies.items():
+            total, dd, sharpe = backtest(
+                df,
+                signal,
+                fee=CONFIG["fee"],
+                slippage=CONFIG["slippage"]
+            )
 
             summary.append({
-                "symbol":sym,
-                "strategy":name,
-                "return":total,
-                "dd":dd,
-                "sharpe":sharpe
+                "symbol": sym,
+                "strategy": name,
+                "return_pct": total,
+                "max_dd_pct": dd,
+                "sharpe": sharpe
             })
 
-    res=pd.DataFrame(summary)
+    if not summary:
+        with open("latest_summary.txt", "w", encoding="utf-8") as f:
+            f.write("No valid results generated.")
+        print("No valid results generated.")
+        return
 
-    res=res.sort_values("return",ascending=False)
+    res = pd.DataFrame(summary)
+    res = res.sort_values(["return_pct", "sharpe"], ascending=[False, False]).reset_index(drop=True)
 
-    now=datetime.now().strftime("%Y%m%d_%H%M%S")
+    now = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_path = f"{REPORT_DIR}/result_{now}.csv"
 
-    csv_path=f"{REPORT_DIR}/result_{now}.csv"
+    res.to_csv(csv_path, index=False, encoding="utf-8-sig")
 
-    res.to_csv(csv_path,index=False)
+    with open("latest_summary.txt", "w", encoding="utf-8") as f:
+        f.write(res.head(20).to_string(index=False))
 
-    with open("latest_summary.txt","w") as f:
-        f.write(res.head(20).to_string())
-
-    print(res.head(20))
-
-    print("saved:",csv_path)
+    print(res.head(20).to_string(index=False))
+    print("saved:", csv_path)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()

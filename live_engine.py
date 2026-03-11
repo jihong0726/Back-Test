@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-VERSION = "V10_LIVE_ENGINE"
+VERSION = "V10_LIVE_ENGINE_TELEGRAM"
 
 CONFIG = {
     "symbols": [
@@ -76,6 +76,75 @@ def append_decision_logs(rows: list[dict]):
         old = pd.read_csv(DECISION_LOG_PATH)
         df = pd.concat([old, df], ignore_index=True)
     df.to_csv(DECISION_LOG_PATH, index=False, encoding="utf-8-sig")
+
+
+# =========================================================
+# Telegram
+# =========================================================
+def send_telegram_message(text: str):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        print("Telegram secrets not found, skip sending message.")
+        return
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text[:3500]
+    }
+
+    try:
+        r = requests.post(url, json=payload, timeout=15)
+        r.raise_for_status()
+        print("Telegram message sent.")
+    except Exception as e:
+        print(f"Failed to send Telegram message: {e}")
+
+
+def build_telegram_text(new_signals: list[dict], decision_rows: list[dict], open_positions: dict):
+    lines = [f"{VERSION}", utc_now_str()]
+
+    entry_rows = [x for x in decision_rows if x.get("type") == "ENTRY" and x.get("action") == "OPEN"]
+    close_rows = [x for x in decision_rows if x.get("type") == "POSITION" and x.get("action") == "CLOSE"]
+    manage_rows = [x for x in decision_rows if x.get("type") == "POSITION" and x.get("action") in ("MOVE_SL", "PARTIAL_TP")]
+
+    if entry_rows:
+        lines.append("")
+        lines.append("New Entries")
+        for r in entry_rows[:10]:
+            lines.append(f"{r['symbol']} OPEN | {r.get('strategy', '-')} | {r.get('reason', '')}")
+
+    if manage_rows:
+        lines.append("")
+        lines.append("Position Updates")
+        for r in manage_rows[:10]:
+            pnl = r.get("pnl_pct", 0.0)
+            lines.append(f"{r['symbol']} {r['action']} | pnl {pnl:.2f}% | {r.get('reason', '')}")
+
+    if close_rows:
+        lines.append("")
+        lines.append("Closed")
+        for r in close_rows[:10]:
+            pnl = r.get("pnl_pct", 0.0)
+            lines.append(f"{r['symbol']} CLOSE | pnl {pnl:.2f}% | {r.get('reason', '')}")
+
+    open_rows = []
+    for symbol, pos in open_positions.items():
+        if pos.get("status") == "OPEN":
+            open_rows.append(f"{symbol} {pos.get('side')} | entry {pos.get('entry')} | tp {pos.get('tp')} | sl {pos.get('sl')}")
+
+    if open_rows:
+        lines.append("")
+        lines.append("Open Positions")
+        lines.extend(open_rows[:10])
+
+    if not entry_rows and not manage_rows and not close_rows:
+        lines.append("")
+        lines.append("No important updates.")
+
+    return "\n".join(lines)
 
 
 # =========================================================
@@ -417,7 +486,6 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str):
         result["reason"] = "position already closed"
         return pos, result
 
-    # Stop loss / take profit
     if side == "LONG":
         if current <= sl:
             pos["status"] = "CLOSED"
@@ -456,7 +524,6 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str):
             result["reason"] = "触发止盈"
             return pos, result
 
-    # Partial take profit logic
     if not partial_taken:
         if side == "LONG" and current >= entry + atr:
             pos["partial_taken"] = True
@@ -474,7 +541,6 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str):
             result["reason"] = "达到第一目标，部分止盈并下移止损到入场附近"
             return pos, result
 
-    # Move stop loss if profit moves further
     move_trigger = CONFIG["move_sl_after_profit_atr"] * atr
     if side == "LONG" and current >= entry + move_trigger:
         new_sl = round(max(sl, ema20, entry), 8)
@@ -492,7 +558,6 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str):
             result["reason"] = "盈利扩大，下移止损"
             return pos, result
 
-    # Structure invalidation
     if pos.get("strategy", "").startswith("VWAP_") and market not in ("RANGE", "NEUTRAL"):
         if side == "LONG" and current > vwap:
             result["action"] = "HOLD"
@@ -572,10 +637,8 @@ def main():
     decision_logs = []
     market_rows = []
     new_signals = []
-
     latest_market = {}
 
-    # 1. Scan market first
     for sym in CONFIG["symbols"]:
         try:
             print("processing", sym)
@@ -614,7 +677,6 @@ def main():
                 "reason": str(e),
             })
 
-    # 2. Update existing open positions
     for symbol, pos in list(positions.items()):
         if pos.get("status") != "OPEN":
             continue
@@ -650,7 +712,6 @@ def main():
             "strategy": decision["strategy"],
         })
 
-    # 3. Generate new entries only if open slots available
     open_count = sum(1 for p in positions.values() if p.get("status") == "OPEN")
     slots_left = max(CONFIG["max_open_positions"] - open_count, 0)
 
@@ -698,11 +759,9 @@ def main():
                 "strategy": signal["strategy"],
             })
 
-    # 4. Save state
     save_positions(positions)
     append_decision_logs(decision_logs)
 
-    # 5. Output reports
     pd.DataFrame(new_signals).to_csv(SIGNALS_PATH, index=False, encoding="utf-8-sig")
 
     summary_text = build_summary(
@@ -714,6 +773,9 @@ def main():
 
     with open(SUMMARY_PATH, "w", encoding="utf-8") as f:
         f.write(summary_text)
+
+    telegram_text = build_telegram_text(new_signals, decision_logs, positions)
+    send_telegram_message(telegram_text)
 
     print(summary_text)
     print("")

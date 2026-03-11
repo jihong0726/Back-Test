@@ -8,14 +8,13 @@ import numpy as np
 from datetime import datetime
 import unicodedata
 
-# ==========================================
-# ⚙️ 版本控制
-# ==========================================
-VERSION = "V7.0_多因子代理回测框架"
+
+VERSION = "V7.1_多因子代理回测框架"
 REPORT_DIR = "reports"
 
+
 # ==========================================
-# 🔧 显示工具：处理中英文宽度，保证对齐
+# 显示工具：处理中英文宽度，保证对齐
 # ==========================================
 def text_width(s: str) -> int:
     s = str(s)
@@ -27,10 +26,12 @@ def text_width(s: str) -> int:
             width += 1
     return width
 
+
 def pad_text(s: str, width: int, align: str = "left") -> str:
     s = str(s)
     real = text_width(s)
     pad = max(width - real, 0)
+
     if align == "right":
         return " " * pad + s
     if align == "center":
@@ -39,7 +40,11 @@ def pad_text(s: str, width: int, align: str = "left") -> str:
         return " " * left + s + " " * right
     return s + " " * pad
 
+
 def format_table(df: pd.DataFrame, right_align_cols=None) -> str:
+    if df is None or df.empty:
+        return "暂无数据"
+
     if right_align_cols is None:
         right_align_cols = set()
 
@@ -64,11 +69,13 @@ def format_table(df: pd.DataFrame, right_align_cols=None) -> str:
 
     return "\n".join(lines)
 
+
 # ==========================================
-# 🌐 数据抓取
+# 数据抓取
 # ==========================================
 def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", rounds=15, limit=1000):
     print(f"[{VERSION}] 抓取 {symbol} {interval} K线数据...")
+
     url = "https://api.bitget.com/api/v2/mix/market/candles"
     end_time = str(int(time.time() * 1000))
     all_data = []
@@ -83,8 +90,11 @@ def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", rounds=15, limit=1000)
         }
 
         try:
-            res = requests.get(url, params=params, timeout=10)
-            data = res.json().get("data", [])
+            res = requests.get(url, params=params, timeout=15)
+            res.raise_for_status()
+            payload = res.json()
+            data = payload.get("data", [])
+
             if not data:
                 break
 
@@ -95,8 +105,9 @@ def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", rounds=15, limit=1000)
             all_data.extend(data)
             end_time = new_end_time
             time.sleep(0.08)
+
         except Exception as e:
-            print(f"抓取失败: {e}")
+            print(f"抓取 K 线失败: {e}")
             break
 
     if not all_data:
@@ -116,35 +127,42 @@ def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", rounds=15, limit=1000)
 
     df = df.dropna().reset_index(drop=True)
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+
     return df
+
 
 def fetch_open_interest(symbol="BTCUSDT"):
     try:
         url = "https://api.bitget.com/api/v2/mix/market/open-interest"
         params = {"symbol": symbol, "productType": "USDT-FUTURES"}
-        res = requests.get(url, params=params, timeout=10).json()
-        data = res.get("data", {})
-        oi = float(data.get("size", 0))
-        return oi
+        res = requests.get(url, params=params, timeout=10)
+        res.raise_for_status()
+        payload = res.json()
+        data = payload.get("data", {})
+        return float(data.get("size", np.nan))
     except Exception:
         return np.nan
+
 
 def fetch_funding_rate(symbol="BTCUSDT"):
     try:
         url = "https://api.bitget.com/api/v2/mix/market/current-fund-rate"
         params = {"symbol": symbol, "productType": "USDT-FUTURES"}
-        res = requests.get(url, params=params, timeout=10).json()
-        data = res.get("data", {})
-        fr = float(data.get("fundingRate", 0))
-        return fr
+        res = requests.get(url, params=params, timeout=10)
+        res.raise_for_status()
+        payload = res.json()
+        data = payload.get("data", {})
+        return float(data.get("fundingRate", np.nan))
     except Exception:
         return np.nan
 
+
 # ==========================================
-# 📐 技术指标
+# 技术指标
 # ==========================================
-def calc_rsi(series, period=14):
+def calc_rsi(series: pd.Series, period=14):
     delta = series.diff()
+
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
 
@@ -155,24 +173,35 @@ def calc_rsi(series, period=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi.fillna(50)
 
-def calc_macd(series, fast=12, slow=26, signal=9):
+
+def calc_macd(series: pd.Series, fast=12, slow=26, signal=9):
     ema_fast = series.ewm(span=fast, adjust=False).mean()
     ema_slow = series.ewm(span=slow, adjust=False).mean()
+
     macd = ema_fast - ema_slow
     macd_signal = macd.ewm(span=signal, adjust=False).mean()
     macd_hist = macd - macd_signal
+
     return macd, macd_signal, macd_hist
 
-def calc_atr(df, period=14):
+
+def calc_atr(df: pd.DataFrame, period=14):
     prev_close = df["close"].shift(1)
+
     tr1 = df["high"] - df["low"]
     tr2 = (df["high"] - prev_close).abs()
     tr3 = (df["low"] - prev_close).abs()
+
     tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
     atr = tr.rolling(period).mean()
+
     return tr, atr
 
+
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df.copy()
+
     df = df.copy()
 
     df["ema_9"] = df["close"].ewm(span=9, adjust=False).mean()
@@ -187,6 +216,7 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["rsi_14"] = calc_rsi(df["close"], 14)
 
     df["macd"], df["macd_signal"], df["macd_hist"] = calc_macd(df["close"])
+
     df["tr"], df["atr_14"] = calc_atr(df, 14)
     df["atr_3"] = df["tr"].rolling(3).mean()
 
@@ -194,7 +224,11 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+
 def resample_4h(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame()
+
     temp = df.copy()
     temp = temp.set_index("timestamp")
 
@@ -206,61 +240,71 @@ def resample_4h(df: pd.DataFrame) -> pd.DataFrame:
         "base_vol": "sum",
         "quote_vol": "sum"
     }
-    df4h = temp.resample("4H").agg(agg).dropna().reset_index()
+
+    # 重点修复：新版 pandas 这里要用小写 h，不要用 4H
+    df4h = temp.resample("4h").agg(agg).dropna().reset_index()
     df4h = add_indicators(df4h)
+
     return df4h
 
+
 # ==========================================
-# 🧠 生成代理 Prompt 快照数据
+# 生成代理快照数据
 # ==========================================
+def safe_round(value, digits=6):
+    if pd.isna(value):
+        return None
+    return round(float(value), digits)
+
+
 def build_agent_snapshot(df_5m: pd.DataFrame, df_4h: pd.DataFrame, symbol="BTCUSDT"):
     latest = df_5m.iloc[-1]
     last10 = df_5m.tail(10)
-    latest_4h = df_4h.iloc[-1]
-    last10_4h = df_4h.tail(10)
-
-    oi_latest = fetch_open_interest(symbol)
-    funding_rate = fetch_funding_rate(symbol)
 
     snapshot = {
         "symbol": symbol,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "current_market_state": {
-            "current_price": round(float(latest["close"]), 6),
-            "current_ema20": round(float(latest["ema_20"]), 6),
-            "current_macd": round(float(latest["macd"]), 6),
-            "current_rsi_7": round(float(latest["rsi_7"]), 6),
-            "open_interest_latest": None if pd.isna(oi_latest) else round(float(oi_latest), 6),
-            "open_interest_average_est": None if pd.isna(oi_latest) else round(float(oi_latest), 6),
-            "funding_rate": None if pd.isna(funding_rate) else round(float(funding_rate), 8),
+            "current_price": safe_round(latest["close"]),
+            "current_ema20": safe_round(latest["ema_20"]),
+            "current_macd": safe_round(latest["macd"]),
+            "current_rsi_7": safe_round(latest["rsi_7"]),
+            "open_interest_latest": safe_round(fetch_open_interest(symbol)),
+            "funding_rate": safe_round(fetch_funding_rate(symbol), 8),
             "intraday_series": {
-                "mid_prices": [round(float(x), 6) for x in last10["close"].tolist()],
-                "ema20": [round(float(x), 6) for x in last10["ema_20"].tolist()],
-                "macd": [round(float(x), 6) for x in last10["macd"].tolist()],
-                "rsi_7": [round(float(x), 6) for x in last10["rsi_7"].tolist()],
-                "rsi_14": [round(float(x), 6) for x in last10["rsi_14"].tolist()]
-            },
-            "longer_term_context_4h": {
-                "ema20": round(float(latest_4h["ema_20"]), 6),
-                "ema50": round(float(latest_4h["ema_50"]), 6),
-                "atr_3": round(float(latest_4h["atr_3"]), 6),
-                "atr_14": round(float(latest_4h["atr_14"]), 6),
-                "current_volume": round(float(latest_4h["base_vol"]), 6),
-                "average_volume_20": round(float(df_4h["base_vol"].tail(20).mean()), 6),
-                "macd_series": [round(float(x), 6) for x in last10_4h["macd"].tolist()],
-                "rsi_14_series": [round(float(x), 6) for x in last10_4h["rsi_14"].tolist()]
+                "mid_prices": [safe_round(x) for x in last10["close"].tolist()],
+                "ema20": [safe_round(x) for x in last10["ema_20"].tolist()],
+                "macd": [safe_round(x) for x in last10["macd"].tolist()],
+                "rsi_7": [safe_round(x) for x in last10["rsi_7"].tolist()],
+                "rsi_14": [safe_round(x) for x in last10["rsi_14"].tolist()]
             }
         }
     }
+
+    if not df_4h.empty:
+        latest_4h = df_4h.iloc[-1]
+        last10_4h = df_4h.tail(10)
+
+        snapshot["current_market_state"]["longer_term_context_4h"] = {
+            "ema20": safe_round(latest_4h["ema_20"]),
+            "ema50": safe_round(latest_4h["ema_50"]),
+            "atr_3": safe_round(latest_4h["atr_3"]),
+            "atr_14": safe_round(latest_4h["atr_14"]),
+            "current_volume": safe_round(latest_4h["base_vol"]),
+            "average_volume_20": safe_round(df_4h["base_vol"].tail(20).mean()),
+            "macd_series": [safe_round(x) for x in last10_4h["macd"].tolist()],
+            "rsi_14_series": [safe_round(x) for x in last10_4h["rsi_14"].tolist()]
+        }
+
     return snapshot
 
+
 # ==========================================
-# 📊 交易策略集合
+# 策略集合
 # ==========================================
 def generate_strategies(df: pd.DataFrame):
     s = {}
 
-    # 趋势
     s["01.趋势跟随_EMA20x50_RSI"] = np.where(
         (df["ema_20"] > df["ema_50"]) & (df["rsi_14"] > 55),
         1,
@@ -285,7 +329,6 @@ def generate_strategies(df: pd.DataFrame):
         np.where((df["macd_hist"] < 0) & (df["close"] < df["ema_20"]), -1, 0)
     )
 
-    # 放量
     s["05.放量突破_EMA20_VOL"] = np.where(
         (df["close"] > df["ema_20"]) & (df["base_vol"] > df["vol_ma_20"] * 1.2),
         1,
@@ -298,7 +341,6 @@ def generate_strategies(df: pd.DataFrame):
         np.where((df["close"] < df["ema_50"]) & (df["base_vol"] > df["vol_ma_50"] * 1.1), -1, 0)
     )
 
-    # ATR / 波动
     s["07.ATR突破_EMA20"] = np.where(
         df["close"] > (df["ema_20"] + df["atr_14"]),
         1,
@@ -311,7 +353,6 @@ def generate_strategies(df: pd.DataFrame):
         np.where(df["close"] < (df["ema_50"] - df["atr_14"] * 0.8), -1, 0)
     )
 
-    # 均值回归
     s["09.RSI超卖超买_均值回归"] = np.where(
         df["rsi_7"] < 25,
         1,
@@ -330,7 +371,6 @@ def generate_strategies(df: pd.DataFrame):
         np.where(df["close"] > df["ema_50"] * 1.02, -1, 0)
     )
 
-    # 多因子组合
     s["12.四因子共振_EMA_MACD_RSI_VOL"] = np.where(
         (df["close"] > df["ema_200"]) &
         (df["macd"] > 0) &
@@ -375,7 +415,6 @@ def generate_strategies(df: pd.DataFrame):
         )
     )
 
-    # 反转
     s["15.低位反弹_RSI7_MACD修复"] = np.where(
         (df["rsi_7"] < 30) & (df["macd_hist"] > df["macd_hist"].shift(1)),
         1,
@@ -388,7 +427,6 @@ def generate_strategies(df: pd.DataFrame):
         np.where(df["close"] < df["low"].shift(1).rolling(20).min(), -1, 0)
     )
 
-    # 混合型组合
     s["17.趋势+突破_EMA50_ATR_MACD"] = np.where(
         (df["close"] > df["ema_50"]) &
         (df["close"] > df["ema_20"] + df["atr_14"] * 0.5) &
@@ -489,8 +527,9 @@ def generate_strategies(df: pd.DataFrame):
 
     return s
 
+
 # ==========================================
-# 🧪 回测核心
+# 回测核心
 # ==========================================
 def run_backtest_for_signal(df: pd.DataFrame, signal: pd.Series, fee_rate=0.0006):
     pos = pd.Series(signal, index=df.index)
@@ -507,14 +546,16 @@ def run_backtest_for_signal(df: pd.DataFrame, signal: pd.Series, fee_rate=0.0006
     total_return = (equity.iloc[-1] - 1) * 100
     max_dd = ((equity - equity.cummax()) / equity.cummax()).min() * 100
 
-    wins = (net_ret > 0).sum()
-    losses = (net_ret < 0).sum()
-    total_bars = len(net_ret[net_ret != 0])
+    active_returns = net_ret[net_ret != 0]
+    wins = (active_returns > 0).sum()
+    total_bars = len(active_returns)
     win_rate = (wins / total_bars * 100) if total_bars > 0 else 0
 
     avg_ret = net_ret.mean()
     std_ret = net_ret.std()
-    sharpe = (avg_ret / std_ret * math.sqrt(252 * 24 * 12)) if std_ret and not np.isnan(std_ret) and std_ret != 0 else 0
+
+    annual_factor = 252 * 24 * 12
+    sharpe = (avg_ret / std_ret * math.sqrt(annual_factor)) if std_ret and not np.isnan(std_ret) and std_ret != 0 else 0
 
     return {
         "净收益(%)": total_return,
@@ -525,6 +566,7 @@ def run_backtest_for_signal(df: pd.DataFrame, signal: pd.Series, fee_rate=0.0006
         "最终资金曲线": equity
     }
 
+
 def run_strategy_tournament(df: pd.DataFrame):
     strategies = generate_strategies(df)
     results = []
@@ -533,6 +575,7 @@ def run_strategy_tournament(df: pd.DataFrame):
     for name, sig in strategies.items():
         r = run_backtest_for_signal(df, pd.Series(sig))
         curves[name] = r["最终资金曲线"]
+
         results.append({
             "策略名称": name,
             "净收益(%)": f'{r["净收益(%)"]:.2f}%',
@@ -544,8 +587,10 @@ def run_strategy_tournament(df: pd.DataFrame):
 
     report = pd.DataFrame(results)
 
+    if report.empty:
+        return report, curves
+
     report["_净收益排序"] = report["净收益(%)"].str.replace("%", "", regex=False).astype(float)
-    report["_回撤排序"] = report["最大回撤(%)"].str.replace("%", "", regex=False).astype(float)
     report["_Sharpe排序"] = report["Sharpe"].astype(float)
 
     report = report.sort_values(
@@ -553,19 +598,21 @@ def run_strategy_tournament(df: pd.DataFrame):
         ascending=[False, False]
     ).reset_index(drop=True)
 
-    report = report.drop(columns=["_净收益排序", "_回撤排序", "_Sharpe排序"])
+    report = report.drop(columns=["_净收益排序", "_Sharpe排序"])
     return report, curves
 
+
 # ==========================================
-# 💾 输出
+# 输出
 # ==========================================
 def ensure_report_dir():
     os.makedirs(REPORT_DIR, exist_ok=True)
 
+
 def save_outputs(report: pd.DataFrame, snapshot: dict, symbol: str):
     ensure_report_dir()
-    now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+    now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = os.path.join(REPORT_DIR, f"{symbol}_策略回测报告_{now_str}.csv")
     json_path = os.path.join(REPORT_DIR, f"{symbol}_代理快照_{now_str}.json")
     txt_path = os.path.join(REPORT_DIR, f"{symbol}_策略回测报告_{now_str}.txt")
@@ -579,13 +626,70 @@ def save_outputs(report: pd.DataFrame, snapshot: dict, symbol: str):
         report,
         right_align_cols={"净收益(%)", "最大回撤(%)", "胜率(%)", "Sharpe", "信号变更次数"}
     )
+
     with open(txt_path, "w", encoding="utf-8") as f:
         f.write(table_text)
 
     return csv_path, json_path, txt_path
 
+
+def build_summary_text(symbol, interval, df, df4h, report, snapshot, benchmark):
+    lines = []
+
+    lines.append(f"[{VERSION}] 多策略综合回测结果")
+    lines.append(f"运行时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"交易标的: {symbol}")
+    lines.append(f"周期: {interval}")
+    lines.append(f"样本K线数: {len(df)}")
+    lines.append(f"现货基准涨跌: {benchmark:.2f}%")
+    lines.append("=" * 120)
+
+    if report.empty:
+        lines.append("没有生成任何策略结果。")
+        return "\n".join(lines)
+
+    top10 = report.head(10)
+    lines.append("【策略排行榜 Top 10】")
+    lines.append(
+        format_table(
+            top10,
+            right_align_cols={"净收益(%)", "最大回撤(%)", "胜率(%)", "Sharpe", "信号变更次数"}
+        )
+    )
+
+    lines.append("")
+    lines.append("【当前市场快照】")
+    cms = snapshot.get("current_market_state", {})
+    lines.append(f"当前价格: {cms.get('current_price')}")
+    lines.append(f"当前 EMA20: {cms.get('current_ema20')}")
+    lines.append(f"当前 MACD: {cms.get('current_macd')}")
+    lines.append(f"当前 RSI7: {cms.get('current_rsi_7')}")
+    lines.append(f"最新未平仓量 OI: {cms.get('open_interest_latest')}")
+    lines.append(f"资金费率: {cms.get('funding_rate')}")
+
+    ctx4h = cms.get("longer_term_context_4h", {})
+    if ctx4h:
+        lines.append("")
+        lines.append("【4小时上下文】")
+        lines.append(f"4h EMA20: {ctx4h.get('ema20')}")
+        lines.append(f"4h EMA50: {ctx4h.get('ema50')}")
+        lines.append(f"4h ATR3: {ctx4h.get('atr_3')}")
+        lines.append(f"4h ATR14: {ctx4h.get('atr_14')}")
+        lines.append(f"4h 当前成交量: {ctx4h.get('current_volume')}")
+        lines.append(f"4h 平均成交量20: {ctx4h.get('average_volume_20')}")
+
+    if not report.empty:
+        best = report.iloc[0].to_dict()
+        lines.append("")
+        lines.append("【当前最佳策略】")
+        for k, v in best.items():
+            lines.append(f"{k}: {v}")
+
+    return "\n".join(lines)
+
+
 # ==========================================
-# 🚀 主程序
+# 主程序
 # ==========================================
 def main():
     symbol = "BTCUSDT"
@@ -599,38 +703,30 @@ def main():
     df = add_indicators(df)
     df4h = resample_4h(df)
 
-    # 跑回测
     report, curves = run_strategy_tournament(df)
 
-    # 基准
     benchmark = ((df["close"].iloc[-1] / df["close"].iloc[0]) - 1) * 100
-
-    # 构建代理快照
     snapshot = build_agent_snapshot(df, df4h, symbol=symbol)
 
-    # 输出文件
     csv_path, json_path, txt_path = save_outputs(report, snapshot, symbol)
 
-    # 控制台输出
-    print(f"\n[{VERSION}] 多策略综合回测结果")
-    print(f"运行时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"交易标的: {symbol}")
-    print(f"周期: {interval}")
-    print(f"样本K线数: {len(df)}")
-    print(f"现货基准涨跌: {benchmark:.2f}%")
-    print("=" * 110)
-
-    top10 = report.head(10)
-    table_text = format_table(
-        top10,
-        right_align_cols={"净收益(%)", "最大回撤(%)", "胜率(%)", "Sharpe", "信号变更次数"}
+    summary_text = build_summary_text(
+        symbol=symbol,
+        interval=interval,
+        df=df,
+        df4h=df4h,
+        report=report,
+        snapshot=snapshot,
+        benchmark=benchmark
     )
-    print(table_text)
 
-    print("\n文件已输出:")
+    print(summary_text)
+    print("")
+    print("文件已输出:")
     print(f"- CSV 报告: {csv_path}")
     print(f"- JSON 快照: {json_path}")
     print(f"- TXT 对齐表: {txt_path}")
+
 
 if __name__ == "__main__":
     main()

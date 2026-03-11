@@ -10,7 +10,7 @@ import pandas as pd
 from datetime import datetime
 import unicodedata
 
-VERSION = "V8.2_多币对_多策略_强制打包输出版"
+VERSION = "V8.3_市场状态_滚动回测_风控版"
 REPORT_DIR = "reports"
 
 CONFIG = {
@@ -21,11 +21,18 @@ CONFIG = {
     "max_pages": 8,
     "fee_rate": 0.0006,
     "slippage_rate": 0.0002,
-    "train_ratio": 0.6,
-    "min_bars_required": 1200
+    "min_bars_required": 1500,
+    "walk_forward_train": 1000,
+    "walk_forward_test": 300,
+    "walk_forward_step": 300,
+    "atr_stop_mult": 1.5,
+    "atr_take_mult": 2.0,
 }
 
 
+# =========================================================
+# 基础工具
+# =========================================================
 def ensure_dir(path: str):
     os.makedirs(path, exist_ok=True)
 
@@ -116,6 +123,9 @@ def interval_to_ms(interval: str) -> int:
     return mapping.get(interval, 5 * 60_000)
 
 
+# =========================================================
+# 数据抓取
+# =========================================================
 def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", target_bars=3000, request_limit=1000, max_pages=8):
     url = "https://api.bitget.com/api/v2/mix/market/candles"
     step_ms = interval_to_ms(interval)
@@ -157,9 +167,9 @@ def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", target_bars=3000, requ
                 break
 
             all_rows.extend(batch)
-
             oldest_ts = min(int(r[0]) for r in batch)
             newest_ts = max(int(r[0]) for r in batch)
+
             print(f"[{symbol}] 第 {page + 1} 页新增 {len(batch)} 根，时间范围: {oldest_ts} ~ {newest_ts}，累计 {len(all_rows)} 根")
 
             if len(all_rows) >= target_bars:
@@ -185,10 +195,12 @@ def fetch_candles_bitget(symbol="BTCUSDT", interval="5m", target_bars=3000, requ
 
     df = df.dropna().drop_duplicates(subset=["timestamp"]).sort_values("timestamp").reset_index(drop=True)
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
-
     return df
 
 
+# =========================================================
+# 技术指标
+# =========================================================
 def calc_rsi(series: pd.Series, period=14):
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
@@ -229,6 +241,14 @@ def calc_bollinger(series: pd.Series, period=20, std_mult=2.0):
     return ma, upper, lower
 
 
+def calc_vwap(df: pd.DataFrame):
+    typical_price = (df["high"] + df["low"] + df["close"]) / 3
+    pv = typical_price * df["base_vol"]
+    cum_pv = pv.cumsum()
+    cum_vol = df["base_vol"].replace(0, np.nan).cumsum()
+    return (cum_pv / cum_vol).fillna(method="ffill")
+
+
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df.copy()
@@ -258,9 +278,12 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["donchian_high_55"] = df["high"].shift(1).rolling(55).max()
     df["donchian_low_55"] = df["low"].shift(1).rolling(55).min()
 
+    df["vwap"] = calc_vwap(df)
+
     df["ret"] = df["close"].pct_change().fillna(0)
     df["dist_ema20"] = (df["close"] / df["ema_20"]) - 1
     df["dist_ema50"] = (df["close"] / df["ema_50"]) - 1
+    df["dist_vwap"] = (df["close"] / df["vwap"]) - 1
 
     return df
 
@@ -284,137 +307,167 @@ def resample_4h(df: pd.DataFrame) -> pd.DataFrame:
     return df4h
 
 
+# =========================================================
+# 市场状态识别
+# =========================================================
+def classify_regime(df: pd.DataFrame) -> pd.Series:
+    ema_gap = ((df["ema_20"] - df["ema_50"]).abs() / df["close"]).fillna(0)
+    ema20_slope = (df["ema_20"] - df["ema_20"].shift(5)) / df["close"]
+    atr_ratio = (df["atr_14"] / df["close"]).fillna(0)
+
+    regime = pd.Series("RANGE", index=df.index)
+
+    trend_up = (df["ema_20"] > df["ema_50"]) & (ema20_slope > 0.002) & (ema_gap > 0.003)
+    trend_down = (df["ema_20"] < df["ema_50"]) & (ema20_slope < -0.002) & (ema_gap > 0.003)
+    high_vol_range = (atr_ratio > 0.01) & ~(trend_up | trend_down)
+
+    regime[trend_up] = "TREND_UP"
+    regime[trend_down] = "TREND_DOWN"
+    regime[high_vol_range] = "RANGE_VOL"
+
+    return regime
+
+
+# =========================================================
+# 策略生成
+# =========================================================
 def signal_from_conditions(long_cond, short_cond):
     return pd.Series(np.where(long_cond, 1, np.where(short_cond, -1, 0)))
 
 
+def apply_regime_filter(signal: pd.Series, regime: pd.Series, allowed_regimes):
+    filtered = signal.copy()
+    mask = ~regime.isin(allowed_regimes)
+    filtered[mask] = 0
+    return filtered
+
+
 def generate_strategies(df: pd.DataFrame):
-    s = {}
+    regime = classify_regime(df)
+    strategies = {}
 
-    ema_pairs = [(9, 20), (12, 34), (20, 50), (21, 55), (50, 200)]
-    for fast, slow in ema_pairs:
-        s[f"EMA交叉_{fast}_{slow}"] = signal_from_conditions(
-            df[f"ema_{fast}"] > df[f"ema_{slow}"],
-            df[f"ema_{fast}"] < df[f"ema_{slow}"]
-        )
-
-    trend_cfgs = [
-        (20, 50, 55, 45),
-        (21, 55, 58, 42),
-        (50, 200, 55, 45),
-    ]
-    for fast, slow, rsi_up, rsi_dn in trend_cfgs:
-        s[f"趋势过滤_EMA{fast}_{slow}_RSI{rsi_up}_{rsi_dn}"] = signal_from_conditions(
-            (df[f"ema_{fast}"] > df[f"ema_{slow}"]) & (df["rsi_14"] > rsi_up),
-            (df[f"ema_{fast}"] < df[f"ema_{slow}"]) & (df["rsi_14"] < rsi_dn)
-        )
-
-    for up, dn in [(55, 45), (60, 40), (52, 48)]:
-        s[f"MACD_RSI过滤_{up}_{dn}"] = signal_from_conditions(
-            (df["macd"] > df["macd_signal"]) & (df["rsi_7"] > up),
-            (df["macd"] < df["macd_signal"]) & (df["rsi_7"] < dn)
-        )
-
-    for ema in [20, 50]:
-        s[f"MACD柱体_EMA{ema}"] = signal_from_conditions(
-            (df["macd_hist"] > 0) & (df["close"] > df[f"ema_{ema}"]),
-            (df["macd_hist"] < 0) & (df["close"] < df[f"ema_{ema}"])
-        )
-
-    for vol_len, mult in [(20, 1.2), (20, 1.4), (50, 1.2)]:
-        vol_col = f"vol_ma_{vol_len}"
-        s[f"放量突破_VOL{vol_len}_{mult}"] = signal_from_conditions(
-            (df["close"] > df["ema_20"]) & (df["base_vol"] > df[vol_col] * mult),
-            (df["close"] < df["ema_20"]) & (df["base_vol"] > df[vol_col] * mult)
-        )
-
-    for ema, mult in [(20, 0.8), (20, 1.0), (50, 0.8), (50, 1.0)]:
-        s[f"ATR突破_EMA{ema}_{mult}"] = signal_from_conditions(
-            df["close"] > (df[f"ema_{ema}"] + df["atr_14"] * mult),
-            df["close"] < (df[f"ema_{ema}"] - df["atr_14"] * mult)
-        )
-
-    for low, high in [(20, 80), (25, 75), (30, 70)]:
-        s[f"RSI反转_{low}_{high}"] = signal_from_conditions(
-            df["rsi_7"] < low,
-            df["rsi_7"] > high
-        )
-
-    for ema, dist in [(20, 0.015), (20, 0.02), (50, 0.02), (50, 0.03)]:
-        dist_col = f"dist_ema{ema}"
-        s[f"偏离EMA{ema}_反转_{dist}"] = signal_from_conditions(
-            df[dist_col] < -dist,
-            df[dist_col] > dist
-        )
-
-    for n in [20, 55]:
-        s[f"Donchian突破_{n}"] = signal_from_conditions(
-            df["close"] > df[f"donchian_high_{n}"],
-            df["close"] < df[f"donchian_low_{n}"]
-        )
-
-    s["Bollinger反转_20_2.0"] = signal_from_conditions(
-        df["close"] < df["bb_lower_20"],
-        df["close"] > df["bb_upper_20"]
+    # 反转类
+    strategies["RSI反转_20_80"] = apply_regime_filter(
+        signal_from_conditions(df["rsi_7"] < 20, df["rsi_7"] > 80),
+        regime,
+        ["RANGE", "RANGE_VOL"]
     )
 
-    s["低位修复_RSI_MACD"] = signal_from_conditions(
-        (df["rsi_7"] < 30) & (df["macd_hist"] > df["macd_hist"].shift(1)),
-        (df["rsi_7"] > 70) & (df["macd_hist"] < df["macd_hist"].shift(1))
+    strategies["RSI反转_25_75"] = apply_regime_filter(
+        signal_from_conditions(df["rsi_7"] < 25, df["rsi_7"] > 75),
+        regime,
+        ["RANGE", "RANGE_VOL"]
     )
 
-    s["多因子共振_趋势版"] = signal_from_conditions(
-        (df["close"] > df["ema_200"]) &
-        (df["ema_20"] > df["ema_50"]) &
-        (df["macd_hist"] > 0) &
-        (df["rsi_14"] > 55) &
-        (df["base_vol"] > df["vol_ma_20"]),
-        (df["close"] < df["ema_200"]) &
-        (df["ema_20"] < df["ema_50"]) &
-        (df["macd_hist"] < 0) &
-        (df["rsi_14"] < 45) &
-        (df["base_vol"] > df["vol_ma_20"])
+    strategies["偏离EMA20_反转_0.015"] = apply_regime_filter(
+        signal_from_conditions(df["dist_ema20"] < -0.015, df["dist_ema20"] > 0.015),
+        regime,
+        ["RANGE", "RANGE_VOL"]
     )
 
-    s["多因子共振_动能版"] = signal_from_conditions(
-        (df["close"] > df["ema_50"]) &
-        (df["ema_9"] > df["ema_20"]) &
-        (df["macd"] > df["macd_signal"]) &
-        (df["rsi_7"] > 60),
-        (df["close"] < df["ema_50"]) &
-        (df["ema_9"] < df["ema_20"]) &
-        (df["macd"] < df["macd_signal"]) &
-        (df["rsi_7"] < 40)
+    strategies["偏离EMA20_反转_0.02"] = apply_regime_filter(
+        signal_from_conditions(df["dist_ema20"] < -0.02, df["dist_ema20"] > 0.02),
+        regime,
+        ["RANGE", "RANGE_VOL"]
     )
 
-    s["多因子共振_保守版"] = signal_from_conditions(
-        (df["close"] > df["ema_200"]) &
-        (df["rsi_14"] > 58) &
-        (df["base_vol"] > df["vol_ma_20"] * 1.2),
-        (df["close"] < df["ema_200"]) &
-        (df["rsi_14"] < 42) &
-        (df["base_vol"] > df["vol_ma_20"] * 1.2)
+    strategies["Bollinger反转_20_2.0"] = apply_regime_filter(
+        signal_from_conditions(df["close"] < df["bb_lower_20"], df["close"] > df["bb_upper_20"]),
+        regime,
+        ["RANGE", "RANGE_VOL"]
     )
 
-    s["价格站上双均线_20_50"] = signal_from_conditions(
-        (df["close"] > df["ema_20"]) & (df["close"] > df["ema_50"]),
-        (df["close"] < df["ema_20"]) & (df["close"] < df["ema_50"])
+    strategies["VWAP回归_1.5%"] = apply_regime_filter(
+        signal_from_conditions(df["dist_vwap"] < -0.015, df["dist_vwap"] > 0.015),
+        regime,
+        ["RANGE", "RANGE_VOL"]
     )
 
-    s["价格站上双均线_50_200"] = signal_from_conditions(
-        (df["close"] > df["ema_50"]) & (df["close"] > df["ema_200"]),
-        (df["close"] < df["ema_50"]) & (df["close"] < df["ema_200"])
+    strategies["VWAP回归_2.0%"] = apply_regime_filter(
+        signal_from_conditions(df["dist_vwap"] < -0.02, df["dist_vwap"] > 0.02),
+        regime,
+        ["RANGE", "RANGE_VOL"]
+    )
+
+    strategies["低位修复_RSI_MACD"] = apply_regime_filter(
+        signal_from_conditions(
+            (df["rsi_7"] < 30) & (df["macd_hist"] > df["macd_hist"].shift(1)),
+            (df["rsi_7"] > 70) & (df["macd_hist"] < df["macd_hist"].shift(1))
+        ),
+        regime,
+        ["RANGE", "RANGE_VOL"]
+    )
+
+    # 趋势类
+    strategies["EMA交叉_20_50"] = apply_regime_filter(
+        signal_from_conditions(df["ema_20"] > df["ema_50"], df["ema_20"] < df["ema_50"]),
+        regime,
+        ["TREND_UP", "TREND_DOWN"]
+    )
+
+    strategies["EMA交叉_50_200"] = apply_regime_filter(
+        signal_from_conditions(df["ema_50"] > df["ema_200"], df["ema_50"] < df["ema_200"]),
+        regime,
+        ["TREND_UP", "TREND_DOWN"]
+    )
+
+    strategies["趋势过滤_EMA50_200_RSI55_45"] = apply_regime_filter(
+        signal_from_conditions(
+            (df["ema_50"] > df["ema_200"]) & (df["rsi_14"] > 55),
+            (df["ema_50"] < df["ema_200"]) & (df["rsi_14"] < 45)
+        ),
+        regime,
+        ["TREND_UP", "TREND_DOWN"]
+    )
+
+    strategies["Donchian突破_20"] = apply_regime_filter(
+        signal_from_conditions(df["close"] > df["donchian_high_20"], df["close"] < df["donchian_low_20"]),
+        regime,
+        ["TREND_UP", "TREND_DOWN"]
+    )
+
+    strategies["Donchian突破_55"] = apply_regime_filter(
+        signal_from_conditions(df["close"] > df["donchian_high_55"], df["close"] < df["donchian_low_55"]),
+        regime,
+        ["TREND_UP", "TREND_DOWN"]
+    )
+
+    strategies["ATR突破_EMA20_1.0"] = apply_regime_filter(
+        signal_from_conditions(
+            df["close"] > (df["ema_20"] + df["atr_14"] * 1.0),
+            df["close"] < (df["ema_20"] - df["atr_14"] * 1.0)
+        ),
+        regime,
+        ["TREND_UP", "TREND_DOWN"]
+    )
+
+    strategies["多因子共振_趋势版"] = apply_regime_filter(
+        signal_from_conditions(
+            (df["close"] > df["ema_200"]) &
+            (df["ema_20"] > df["ema_50"]) &
+            (df["macd_hist"] > 0) &
+            (df["rsi_14"] > 55),
+            (df["close"] < df["ema_200"]) &
+            (df["ema_20"] < df["ema_50"]) &
+            (df["macd_hist"] < 0) &
+            (df["rsi_14"] < 45)
+        ),
+        regime,
+        ["TREND_UP", "TREND_DOWN"]
     )
 
     cleaned = {}
-    for k, v in s.items():
+    for k, v in strategies.items():
         sig = pd.Series(v, index=df.index).fillna(0)
         if sig.abs().sum() > 0:
             cleaned[k] = sig
 
-    return cleaned
+    return cleaned, regime
 
 
+# =========================================================
+# 回测核心：带止盈止损
+# =========================================================
 def calc_equity_metrics(net_ret: pd.Series, annual_factor: float):
     net_ret = net_ret.fillna(0)
     equity = (1 + net_ret).cumprod()
@@ -439,76 +492,212 @@ def calc_equity_metrics(net_ret: pd.Series, annual_factor: float):
     }
 
 
-def run_backtest(df: pd.DataFrame, signal: pd.Series, fee_rate=0.0006, slippage_rate=0.0002, annual_factor=72576):
+def run_backtest_with_stops(
+    df: pd.DataFrame,
+    signal: pd.Series,
+    fee_rate=0.0006,
+    slippage_rate=0.0002,
+    annual_factor=72576,
+    atr_stop_mult=1.5,
+    atr_take_mult=2.0
+):
     signal = pd.Series(signal, index=df.index).fillna(0)
+    n = len(df)
 
-    pos = signal.replace(0, np.nan).ffill().fillna(0)
-    pos = pos.shift(1).fillna(0)
+    position = 0
+    entry_price = None
+    stop_price = None
+    take_price = None
 
-    trades = pos.diff().fillna(0).abs()
-    gross_ret = pos * df["ret"]
+    returns = np.zeros(n)
+    trade_count = 0
+    signal_change_count = 0
+    position_bars = 0
 
-    trading_cost = trades * (fee_rate + slippage_rate)
-    net_ret = gross_ret - trading_cost
+    for i in range(1, n):
+        prev_close = float(df["close"].iloc[i - 1])
+        current_open = float(df["open"].iloc[i])
+        current_high = float(df["high"].iloc[i])
+        current_low = float(df["low"].iloc[i])
+        current_close = float(df["close"].iloc[i])
+        atr = float(df["atr_14"].iloc[i]) if pd.notna(df["atr_14"].iloc[i]) else 0.0
+        desired_signal = int(signal.iloc[i - 1])
 
+        # 持仓期间
+        if position != 0:
+            position_bars += 1
+
+            exit_price = None
+            stop_hit = False
+            take_hit = False
+
+            if position == 1:
+                if current_low <= stop_price:
+                    exit_price = stop_price
+                    stop_hit = True
+                elif current_high >= take_price:
+                    exit_price = take_price
+                    take_hit = True
+            elif position == -1:
+                if current_high >= stop_price:
+                    exit_price = stop_price
+                    stop_hit = True
+                elif current_low <= take_price:
+                    exit_price = take_price
+                    take_hit = True
+
+            # 若命中止盈止损
+            if exit_price is not None:
+                gross_ret = position * ((exit_price / prev_close) - 1)
+                cost = fee_rate + slippage_rate
+                returns[i] = gross_ret - cost
+                position = 0
+                entry_price = None
+                stop_price = None
+                take_price = None
+                trade_count += 1
+                signal_change_count += 1
+                continue
+
+            # 正常按收盘计算
+            gross_ret = position * ((current_close / prev_close) - 1)
+            returns[i] = gross_ret
+
+            # 反向信号则平仓并反手
+            if desired_signal != 0 and desired_signal != position:
+                returns[i] -= (fee_rate + slippage_rate)
+                position = desired_signal
+                entry_price = current_close
+                stop_price = entry_price - atr_stop_mult * atr if position == 1 else entry_price + atr_stop_mult * atr
+                take_price = entry_price + atr_take_mult * atr if position == 1 else entry_price - atr_take_mult * atr
+                trade_count += 1
+                signal_change_count += 1
+                continue
+
+        # 空仓时进场
+        if position == 0 and desired_signal != 0 and atr > 0:
+            position = desired_signal
+            entry_price = current_open
+            stop_price = entry_price - atr_stop_mult * atr if position == 1 else entry_price + atr_stop_mult * atr
+            take_price = entry_price + atr_take_mult * atr if position == 1 else entry_price - atr_take_mult * atr
+            returns[i] -= (fee_rate + slippage_rate)
+            trade_count += 1
+            signal_change_count += 1
+
+    net_ret = pd.Series(returns, index=df.index)
     m = calc_equity_metrics(net_ret, annual_factor)
-    exposure = (pos != 0).mean() * 100
+    exposure = position_bars / n * 100 if n > 0 else 0
 
     return {
         "净收益(%)": m["total_return"],
         "最大回撤(%)": m["max_dd"],
         "Sharpe": m["sharpe"],
         "胜率(%)": m["win_rate"],
-        "交易次数": int((trades > 0).sum()),
-        "信号变更次数": int(trades.sum()),
+        "交易次数": int(trade_count),
+        "信号变更次数": int(signal_change_count),
         "持仓占比(%)": exposure,
         "最终资金曲线": m["equity"]
     }
 
 
-def run_train_test_backtest(df: pd.DataFrame, signal: pd.Series, interval: str, fee_rate: float, slippage_rate: float, train_ratio: float):
+def run_walk_forward_backtest(
+    df: pd.DataFrame,
+    signal: pd.Series,
+    interval: str,
+    fee_rate: float,
+    slippage_rate: float,
+    train_size: int,
+    test_size: int,
+    step_size: int,
+    atr_stop_mult: float,
+    atr_take_mult: float
+):
     annual_factor = annual_factor_from_interval(interval)
-    n = len(df)
-    split_idx = int(n * train_ratio)
 
-    if split_idx < 300 or (n - split_idx) < 300:
+    windows = []
+    start = 0
+    n = len(df)
+
+    while start + train_size + test_size <= n:
+        train_end = start + train_size
+        test_end = train_end + test_size
+
+        df_train = df.iloc[start:train_end].copy()
+        df_test = df.iloc[train_end:test_end].copy()
+
+        sig_train = signal.iloc[start:train_end]
+        sig_test = signal.iloc[train_end:test_end]
+
+        train_res = run_backtest_with_stops(
+            df_train, sig_train, fee_rate, slippage_rate, annual_factor,
+            atr_stop_mult, atr_take_mult
+        )
+        test_res = run_backtest_with_stops(
+            df_test, sig_test, fee_rate, slippage_rate, annual_factor,
+            atr_stop_mult, atr_take_mult
+        )
+
+        windows.append({
+            "train": train_res,
+            "test": test_res,
+            "start": start,
+            "train_end": train_end,
+            "test_end": test_end
+        })
+
+        start += step_size
+
+    if not windows:
         return None
 
-    df_train = df.iloc[:split_idx].copy()
-    df_test = df.iloc[split_idx:].copy()
+    def avg_metric(key, side):
+        vals = [w[side][key] for w in windows]
+        return float(np.mean(vals))
 
-    sig_train = signal.iloc[:split_idx]
-    sig_test = signal.iloc[split_idx:]
-
-    train_res = run_backtest(df_train, sig_train, fee_rate, slippage_rate, annual_factor)
-    test_res = run_backtest(df_test, sig_test, fee_rate, slippage_rate, annual_factor)
-    full_res = run_backtest(df, signal, fee_rate, slippage_rate, annual_factor)
+    full_res = run_backtest_with_stops(
+        df, signal, fee_rate, slippage_rate, annual_factor,
+        atr_stop_mult, atr_take_mult
+    )
 
     return {
-        "train": train_res,
-        "test": test_res,
+        "windows": windows,
+        "avg_train_return_pct": avg_metric("净收益(%)", "train"),
+        "avg_train_dd_pct": avg_metric("最大回撤(%)", "train"),
+        "avg_train_sharpe": avg_metric("Sharpe", "train"),
+        "avg_test_return_pct": avg_metric("净收益(%)", "test"),
+        "avg_test_dd_pct": avg_metric("最大回撤(%)", "test"),
+        "avg_test_sharpe": avg_metric("Sharpe", "test"),
+        "avg_test_win_rate_pct": avg_metric("胜率(%)", "test"),
+        "avg_test_trades": avg_metric("交易次数", "test"),
+        "window_count": len(windows),
         "full": full_res
     }
 
 
-def compute_strategy_score(test_return, test_dd, test_sharpe, win_rate, trades, consistency_bonus):
+# =========================================================
+# 评分
+# =========================================================
+def compute_strategy_score(test_return, test_dd, test_sharpe, win_rate, trades, window_count):
     score = 0.0
-    score += test_return * 1.8
-    score += test_sharpe * 8.0
+    score += test_return * 1.6
+    score += test_sharpe * 7.0
     score -= abs(test_dd) * 1.5
-    score += (win_rate - 50) * 0.4
-    score += consistency_bonus
+    score += (win_rate - 50) * 0.35
+    score += window_count * 1.0
 
-    if trades < 3:
-        score -= 18
-    elif trades < 8:
+    if trades < 2:
+        score -= 20
+    elif trades < 5:
         score -= 8
-    elif trades > 120:
+    elif trades > 80:
         score -= 5
 
     return score
 
 
+# =========================================================
+# 单币对回测
+# =========================================================
 def backtest_one_symbol(symbol: str, cfg: dict):
     print(f"\n[{VERSION}] 开始处理 {symbol} ...")
 
@@ -528,55 +717,50 @@ def backtest_one_symbol(symbol: str, cfg: dict):
 
     df = add_indicators(raw)
     df4h = resample_4h(df)
-    strategies = generate_strategies(df)
+    strategies, regime = generate_strategies(df)
 
     rows = []
 
     for strategy_name, signal in strategies.items():
-        res = run_train_test_backtest(
+        res = run_walk_forward_backtest(
             df=df,
             signal=signal,
             interval=cfg["interval"],
             fee_rate=cfg["fee_rate"],
             slippage_rate=cfg["slippage_rate"],
-            train_ratio=cfg["train_ratio"]
+            train_size=cfg["walk_forward_train"],
+            test_size=cfg["walk_forward_test"],
+            step_size=cfg["walk_forward_step"],
+            atr_stop_mult=cfg["atr_stop_mult"],
+            atr_take_mult=cfg["atr_take_mult"]
         )
         if res is None:
             continue
 
-        train_r = res["train"]
-        test_r = res["test"]
-        full_r = res["full"]
-
-        consistency_bonus = 0
-        if test_r["净收益(%)"] > 0:
-            consistency_bonus += 5
-        if test_r["Sharpe"] > 0:
-            consistency_bonus += 3
-        if abs(test_r["最大回撤(%)"]) < 10:
-            consistency_bonus += 3
-
         score = compute_strategy_score(
-            test_return=test_r["净收益(%)"],
-            test_dd=test_r["最大回撤(%)"],
-            test_sharpe=test_r["Sharpe"],
-            win_rate=test_r["胜率(%)"],
-            trades=test_r["交易次数"],
-            consistency_bonus=consistency_bonus
+            test_return=res["avg_test_return_pct"],
+            test_dd=res["avg_test_dd_pct"],
+            test_sharpe=res["avg_test_sharpe"],
+            win_rate=res["avg_test_win_rate_pct"],
+            trades=res["avg_test_trades"],
+            window_count=res["window_count"]
         )
+
+        full_r = res["full"]
 
         rows.append({
             "symbol": symbol,
             "strategy": strategy_name,
             "bars": len(df),
-            "train_return_pct": train_r["净收益(%)"],
-            "train_dd_pct": train_r["最大回撤(%)"],
-            "train_sharpe": train_r["Sharpe"],
-            "test_return_pct": test_r["净收益(%)"],
-            "test_dd_pct": test_r["最大回撤(%)"],
-            "test_sharpe": test_r["Sharpe"],
-            "test_win_rate_pct": test_r["胜率(%)"],
-            "test_trades": test_r["交易次数"],
+            "window_count": res["window_count"],
+            "avg_train_return_pct": res["avg_train_return_pct"],
+            "avg_train_dd_pct": res["avg_train_dd_pct"],
+            "avg_train_sharpe": res["avg_train_sharpe"],
+            "avg_test_return_pct": res["avg_test_return_pct"],
+            "avg_test_dd_pct": res["avg_test_dd_pct"],
+            "avg_test_sharpe": res["avg_test_sharpe"],
+            "avg_test_win_rate_pct": res["avg_test_win_rate_pct"],
+            "avg_test_trades": res["avg_test_trades"],
             "full_return_pct": full_r["净收益(%)"],
             "full_dd_pct": full_r["最大回撤(%)"],
             "full_sharpe": full_r["Sharpe"],
@@ -588,17 +772,24 @@ def backtest_one_symbol(symbol: str, cfg: dict):
     if not rows:
         return None
 
-    result_df = pd.DataFrame(rows).sort_values(by=["score", "test_return_pct"], ascending=[False, False]).reset_index(drop=True)
+    result_df = pd.DataFrame(rows).sort_values(by=["score", "avg_test_return_pct"], ascending=[False, False]).reset_index(drop=True)
+
+    latest_regime = regime.iloc[-1] if len(regime) else "UNKNOWN"
+    regime_counts = regime.value_counts().to_dict()
 
     snapshot = {
         "symbol": symbol,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "current_price": float(df["close"].iloc[-1]),
         "current_ema20": float(df["ema_20"].iloc[-1]),
+        "current_ema50": float(df["ema_50"].iloc[-1]),
         "current_macd": float(df["macd"].iloc[-1]),
         "current_rsi7": float(df["rsi_7"].iloc[-1]),
+        "current_vwap": float(df["vwap"].iloc[-1]),
         "bars": len(df),
-        "interval": cfg["interval"]
+        "interval": cfg["interval"],
+        "latest_regime": latest_regime,
+        "regime_distribution": regime_counts
     }
 
     if not df4h.empty:
@@ -616,6 +807,9 @@ def backtest_one_symbol(symbol: str, cfg: dict):
     }
 
 
+# =========================================================
+# 多币对聚合
+# =========================================================
 def aggregate_across_symbols(all_symbol_result_dfs):
     combined = pd.concat(all_symbol_result_dfs, ignore_index=True)
 
@@ -623,20 +817,20 @@ def aggregate_across_symbols(all_symbol_result_dfs):
         symbols_tested=("symbol", "count"),
         avg_score=("score", "mean"),
         median_score=("score", "median"),
-        avg_test_return_pct=("test_return_pct", "mean"),
-        median_test_return_pct=("test_return_pct", "median"),
-        avg_test_dd_pct=("test_dd_pct", "mean"),
-        avg_test_sharpe=("test_sharpe", "mean"),
-        avg_test_win_rate_pct=("test_win_rate_pct", "mean"),
+        avg_test_return_pct=("avg_test_return_pct", "mean"),
+        median_test_return_pct=("avg_test_return_pct", "median"),
+        avg_test_dd_pct=("avg_test_dd_pct", "mean"),
+        avg_test_sharpe=("avg_test_sharpe", "mean"),
+        avg_test_win_rate_pct=("avg_test_win_rate_pct", "mean"),
         avg_full_return_pct=("full_return_pct", "mean"),
         avg_full_dd_pct=("full_dd_pct", "mean"),
         avg_full_sharpe=("full_sharpe", "mean"),
-        positive_test_symbols=("test_return_pct", lambda x: int((x > 0).sum())),
-        positive_sharpe_symbols=("test_sharpe", lambda x: int((x > 0).sum())),
+        positive_test_symbols=("avg_test_return_pct", lambda x: int((x > 0).sum())),
+        positive_sharpe_symbols=("avg_test_sharpe", lambda x: int((x > 0).sum())),
     ).reset_index()
 
     grouped["robustness_score"] = (
-        grouped["avg_score"] * 0.9
+        grouped["avg_score"] * 0.85
         + grouped["positive_test_symbols"] * 4
         + grouped["positive_sharpe_symbols"] * 2
         - grouped["avg_test_dd_pct"].abs() * 1.2
@@ -650,6 +844,9 @@ def aggregate_across_symbols(all_symbol_result_dfs):
     return combined, grouped
 
 
+# =========================================================
+# 输出
+# =========================================================
 def save_reports(combined_detail_df, overall_df, per_symbol_best_df, snapshots):
     ensure_dir(REPORT_DIR)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -676,43 +873,42 @@ def save_reports(combined_detail_df, overall_df, per_symbol_best_df, snapshots):
     }
 
 
-def build_summary_text(cfg, overall_df, per_symbol_best_df, paths):
+def build_summary_text(cfg, overall_df, per_symbol_best_df, snapshots, paths):
     lines = []
     lines.append(f"[{VERSION}]")
     lines.append(f"运行时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append(f"回测币对: {', '.join(cfg['symbols'])}")
     lines.append(f"周期: {cfg['interval']}")
     lines.append(f"目标K线数: {cfg['target_bars']}")
-    lines.append(f"单次请求上限: {cfg['request_limit']}")
-    lines.append(f"最大翻页数: {cfg['max_pages']}")
-    lines.append(f"手续费: {cfg['fee_rate']}")
-    lines.append(f"滑点: {cfg['slippage_rate']}")
-    lines.append(f"样本内比例: {cfg['train_ratio']}")
-    lines.append("=" * 130)
+    lines.append(f"Walk Forward: train={cfg['walk_forward_train']} / test={cfg['walk_forward_test']} / step={cfg['walk_forward_step']}")
+    lines.append(f"ATR 止损倍数: {cfg['atr_stop_mult']}")
+    lines.append(f"ATR 止盈倍数: {cfg['atr_take_mult']}")
+    lines.append("=" * 140)
 
-    lines.append("【多币对综合最佳策略 Top 15】")
-    show_overall = overall_df.head(15).copy().rename(columns={
+    lines.append("【多币对综合最佳策略 Top 12】")
+    show_overall = overall_df.head(12).copy().rename(columns={
         "strategy": "策略名称",
         "symbols_tested": "测试币数",
         "robustness_score": "综合鲁棒评分",
-        "avg_test_return_pct": "平均样本外收益(%)",
-        "avg_test_dd_pct": "平均样本外回撤(%)",
-        "avg_test_sharpe": "平均样本外Sharpe",
+        "avg_test_return_pct": "平均滚动样本外收益(%)",
+        "avg_test_dd_pct": "平均滚动样本外回撤(%)",
+        "avg_test_sharpe": "平均滚动样本外Sharpe",
         "positive_test_symbols": "样本外盈利币数",
         "positive_sharpe_symbols": "正Sharpe币数",
     })
 
     show_overall = show_overall[[
-        "策略名称", "测试币数", "综合鲁棒评分", "平均样本外收益(%)",
-        "平均样本外回撤(%)", "平均样本外Sharpe", "样本外盈利币数", "正Sharpe币数"
+        "策略名称", "测试币数", "综合鲁棒评分",
+        "平均滚动样本外收益(%)", "平均滚动样本外回撤(%)",
+        "平均滚动样本外Sharpe", "样本外盈利币数", "正Sharpe币数"
     ]].copy()
 
-    for c in ["综合鲁棒评分", "平均样本外收益(%)", "平均样本外回撤(%)", "平均样本外Sharpe"]:
+    for c in ["综合鲁棒评分", "平均滚动样本外收益(%)", "平均滚动样本外回撤(%)", "平均滚动样本外Sharpe"]:
         show_overall[c] = show_overall[c].map(lambda x: safe_num(x, 2))
 
     lines.append(format_table(
         show_overall,
-        right_align_cols={"测试币数", "综合鲁棒评分", "平均样本外收益(%)", "平均样本外回撤(%)", "平均样本外Sharpe", "样本外盈利币数", "正Sharpe币数"}
+        right_align_cols={"测试币数", "综合鲁棒评分", "平均滚动样本外收益(%)", "平均滚动样本外回撤(%)", "平均滚动样本外Sharpe", "样本外盈利币数", "正Sharpe币数"}
     ))
 
     lines.append("")
@@ -720,9 +916,9 @@ def build_summary_text(cfg, overall_df, per_symbol_best_df, paths):
     show_best = per_symbol_best_df.copy().rename(columns={
         "symbol": "币对",
         "strategy": "策略名称",
-        "test_return_pct": "样本外收益(%)",
-        "test_dd_pct": "样本外回撤(%)",
-        "test_sharpe": "样本外Sharpe",
+        "avg_test_return_pct": "滚动样本外收益(%)",
+        "avg_test_dd_pct": "滚动样本外回撤(%)",
+        "avg_test_sharpe": "滚动样本外Sharpe",
         "full_return_pct": "全样本收益(%)",
         "full_dd_pct": "全样本回撤(%)",
         "full_sharpe": "全样本Sharpe",
@@ -730,17 +926,34 @@ def build_summary_text(cfg, overall_df, per_symbol_best_df, paths):
     })
 
     show_best = show_best[[
-        "币对", "策略名称", "综合评分", "样本外收益(%)", "样本外回撤(%)",
-        "样本外Sharpe", "全样本收益(%)", "全样本回撤(%)", "全样本Sharpe"
+        "币对", "策略名称", "综合评分", "滚动样本外收益(%)", "滚动样本外回撤(%)",
+        "滚动样本外Sharpe", "全样本收益(%)", "全样本回撤(%)", "全样本Sharpe"
     ]].copy()
 
-    for c in ["综合评分", "样本外收益(%)", "样本外回撤(%)", "样本外Sharpe", "全样本收益(%)", "全样本回撤(%)", "全样本Sharpe"]:
+    for c in ["综合评分", "滚动样本外收益(%)", "滚动样本外回撤(%)", "滚动样本外Sharpe", "全样本收益(%)", "全样本回撤(%)", "全样本Sharpe"]:
         show_best[c] = show_best[c].map(lambda x: safe_num(x, 2))
 
     lines.append(format_table(
         show_best,
-        right_align_cols={"综合评分", "样本外收益(%)", "样本外回撤(%)", "样本外Sharpe", "全样本收益(%)", "全样本回撤(%)", "全样本Sharpe"}
+        right_align_cols={"综合评分", "滚动样本外收益(%)", "滚动样本外回撤(%)", "滚动样本外Sharpe", "全样本收益(%)", "全样本回撤(%)", "全样本Sharpe"}
     ))
+
+    lines.append("")
+    lines.append("【当前市场状态】")
+    regime_rows = []
+    for symbol in cfg["symbols"]:
+        if symbol in snapshots:
+            snap = snapshots[symbol]
+            regime_rows.append({
+                "币对": symbol,
+                "当前价格": safe_num(snap.get("current_price"), 4),
+                "当前 RSI7": safe_num(snap.get("current_rsi7"), 2),
+                "当前 EMA20": safe_num(snap.get("current_ema20"), 4),
+                "当前 VWAP": safe_num(snap.get("current_vwap"), 4),
+                "最新市场状态": snap.get("latest_regime", "UNKNOWN")
+            })
+    regime_df = pd.DataFrame(regime_rows)
+    lines.append(format_table(regime_df))
 
     lines.append("")
     lines.append("【输出文件】")
@@ -785,10 +998,9 @@ def create_root_exports(paths):
         exported["snapshot_json"] = root_snapshot_json
 
     with zipfile.ZipFile(root_zip, "w", zipfile.ZIP_DEFLATED) as zf:
-        for label, file_path in exported.items():
+        for _, file_path in exported.items():
             if os.path.exists(file_path):
                 zf.write(file_path, arcname=os.path.basename(file_path))
-
         for p in paths.values():
             if os.path.exists(p):
                 zf.write(p, arcname=p)
@@ -802,6 +1014,9 @@ def create_root_exports(paths):
     return exported
 
 
+# =========================================================
+# 主程序
+# =========================================================
 def main():
     all_results = []
     snapshots = {}
@@ -810,7 +1025,6 @@ def main():
         one = backtest_one_symbol(symbol, CONFIG)
         if one is None:
             continue
-
         all_results.append(one["result_df"])
         snapshots[symbol] = one["snapshot"]
 
@@ -825,7 +1039,7 @@ def main():
 
     per_symbol_best_df = (
         combined_detail_df
-        .sort_values(by=["symbol", "score", "test_return_pct"], ascending=[True, False, False])
+        .sort_values(by=["symbol", "score", "avg_test_return_pct"], ascending=[True, False, False])
         .groupby("symbol", as_index=False)
         .head(1)
         .reset_index(drop=True)
@@ -833,7 +1047,7 @@ def main():
 
     paths = save_reports(combined_detail_df, overall_df, per_symbol_best_df, snapshots)
 
-    summary_text = build_summary_text(CONFIG, overall_df, per_symbol_best_df, paths)
+    summary_text = build_summary_text(CONFIG, overall_df, per_symbol_best_df, snapshots, paths)
 
     with open(paths["summary_txt"], "w", encoding="utf-8") as f:
         f.write(summary_text)

@@ -1,13 +1,13 @@
 import os
+import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 import numpy as np
 import pandas as pd
 import requests
 
-VERSION = "V9_RESEARCH_ENGINE"
-REPORT_DIR = "reports"
+VERSION = "V12_PAPER_TRADING_ENGINE"
 
 CONFIG = {
     "symbols": [
@@ -17,23 +17,272 @@ CONFIG = {
         "ATOMUSDT", "NEARUSDT", "DOTUSDT", "FILUSDT", "INJUSDT"
     ],
     "interval": "5m",
-    "bars": 20000,
+    "bars": 1500,
     "page_limit": 1000,
-    "max_pages": 25,
-    "fee": 0.0006,
-    "slippage": 0.0002,
-    "train_ratio": 0.6,
-    "min_rows": 3000
+    "max_pages": 6,
+    "max_open_positions": 5,
+    "min_signal_score": 68,
+
+    # 交易成本
+    "fee_rate": 0.0006,
+    "slippage_rate": 0.0002,
+
+    # 模拟资金费：每次引擎运行时，按名义仓位收取一个很小的近似值
+    # 后续你要接真实 funding rate 再换
+    "funding_rate_per_cycle": 0.00002,
+
+    # 风险参数
+    "risk_mode": "standard",   # conservative / standard / aggressive
+    "risk_per_trade": {
+        "conservative": 0.005,  # 0.5%
+        "standard": 0.01,       # 1%
+        "aggressive": 0.02      # 2%
+    },
+    "max_margin_ratio": 0.25,   # 单笔最多使用账户净值 25% 作为保证金
+    "default_leverage": 5,
+
+    # 止盈止损
+    "atr_stop_mult": 1.0,
+    "atr_tp_mult": 1.8,
+    "partial_tp_ratio": 0.5,
+    "move_sl_after_profit_atr": 1.0,
+
+    # 模拟账户
+    "initial_balance": 10000.0,
 }
 
+STATE_DIR = "state"
+REPORT_DIR = "reports"
 
-def ensure_dir():
+POSITIONS_PATH = os.path.join(STATE_DIR, "positions.json")
+ACCOUNT_PATH = os.path.join(STATE_DIR, "paper_account.json")
+
+DECISION_LOG_PATH = os.path.join(REPORT_DIR, "decision_log.csv")
+SIGNALS_PATH = os.path.join(REPORT_DIR, "signals.csv")
+SUMMARY_PATH = os.path.join(REPORT_DIR, "latest_summary.txt")
+
+
+# =========================================================
+# 基础
+# =========================================================
+def ensure_dirs():
+    os.makedirs(STATE_DIR, exist_ok=True)
     os.makedirs(REPORT_DIR, exist_ok=True)
 
 
-# -------------------------------------------------
-# Data Fetch
-# -------------------------------------------------
+def local_now_str() -> str:
+    tz = timezone(timedelta(hours=8))
+    return datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S UTC+8")
+
+
+def side_symbol(side: str) -> str:
+    if side in ("LONG", "long"):
+        return "🟢 多"
+    if side in ("SHORT", "short"):
+        return "🔴 空"
+    return "⚪ 观望"
+
+
+def safe_round(v, n=8):
+    try:
+        return round(float(v), n)
+    except Exception:
+        return None
+
+
+# =========================================================
+# 文件读写
+# =========================================================
+def load_json_file(path: str, default):
+    if not os.path.exists(path):
+        return default
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return default
+
+
+def save_json_file(path: str, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def load_positions() -> dict:
+    data = load_json_file(POSITIONS_PATH, {})
+    return data if isinstance(data, dict) else {}
+
+
+def save_positions(positions: dict):
+    save_json_file(POSITIONS_PATH, positions)
+
+
+def default_account():
+    init = float(CONFIG["initial_balance"])
+    return {
+        "initial_balance": init,
+        "cash_balance": init,
+        "equity": init,
+        "used_margin": 0.0,
+        "free_margin": init,
+        "realized_pnl": 0.0,
+        "unrealized_pnl": 0.0,
+        "funding_paid": 0.0,
+        "total_fees": 0.0,
+        "last_updated": local_now_str()
+    }
+
+
+def load_account() -> dict:
+    data = load_json_file(ACCOUNT_PATH, default_account())
+    if not isinstance(data, dict):
+        return default_account()
+    return data
+
+
+def save_account(account: dict):
+    account["last_updated"] = local_now_str()
+    save_json_file(ACCOUNT_PATH, account)
+
+
+def append_decision_logs(rows: list[dict]):
+    if not rows:
+        return
+
+    df = pd.DataFrame(rows)
+    if os.path.exists(DECISION_LOG_PATH):
+        old = pd.read_csv(DECISION_LOG_PATH)
+        df = pd.concat([old, df], ignore_index=True)
+    df.to_csv(DECISION_LOG_PATH, index=False, encoding="utf-8-sig")
+
+
+# =========================================================
+# Telegram
+# =========================================================
+def send_telegram_message(text: str):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        print("Telegram secrets not found, skip sending message.")
+        return
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text[:3800]
+    }
+
+    try:
+        r = requests.post(url, json=payload, timeout=15)
+        r.raise_for_status()
+        print("Telegram message sent.")
+    except Exception as e:
+        print(f"Failed to send Telegram message: {e}")
+
+
+def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: list[dict], open_positions: dict):
+    lines = []
+    lines.append("📊 模拟交易引擎 V12")
+    lines.append(f"时间：{local_now_str()}")
+    lines.append("")
+
+    lines.append("账户概况")
+    lines.append(f"初始资金：{account['initial_balance']:.2f}U")
+    lines.append(f"当前净值：{account['equity']:.2f}U")
+    lines.append(f"可用余额：{account['free_margin']:.2f}U")
+    lines.append(f"已用保证金：{account['used_margin']:.2f}U")
+    lines.append(f"已实现盈亏：{account['realized_pnl']:.2f}U")
+    lines.append(f"未实现盈亏：{account['unrealized_pnl']:.2f}U")
+    lines.append(f"手续费：{account['total_fees']:.2f}U")
+    lines.append(f"资金费：{account['funding_paid']:.2f}U")
+    lines.append("")
+
+    entry_rows = [x for x in decision_rows if x.get("type") == "ENTRY" and x.get("action") == "OPEN"]
+    close_rows = [x for x in decision_rows if x.get("type") == "POSITION" and x.get("action") == "CLOSE"]
+    manage_rows = [x for x in decision_rows if x.get("type") == "POSITION" and x.get("action") in ("MOVE_SL", "PARTIAL_TP")]
+
+    if entry_rows:
+        lines.append("━━━━━━━━━━━━━━")
+        lines.append("🟢 新开仓")
+        lines.append("━━━━━━━━━━━━━━")
+        lines.append("")
+        for r in entry_rows[:5]:
+            lines.append(f"{r['symbol']}")
+            lines.append(f"方向：{side_symbol(r.get('side', ''))}")
+            lines.append(f"策略：{r.get('strategy', '-')}")
+            lines.append(f"原因：{r.get('reason', '')}")
+            if r.get("entry") is not None:
+                lines.append(f"入场：{r['entry']}")
+            if r.get("tp") is not None:
+                lines.append(f"止盈：{r['tp']}")
+            if r.get("sl") is not None:
+                lines.append(f"止损：{r['sl']}")
+            if r.get("margin") is not None:
+                lines.append(f"保证金：{r['margin']:.2f}U")
+            if r.get("notional") is not None:
+                lines.append(f"名义仓位：{r['notional']:.2f}U")
+            lines.append("")
+
+    if manage_rows:
+        lines.append("━━━━━━━━━━━━━━")
+        lines.append("⚙️ 持仓调整")
+        lines.append("━━━━━━━━━━━━━━")
+        lines.append("")
+        for r in manage_rows[:5]:
+            pnl = r.get("pnl_pct", 0.0)
+            action_map = {
+                "MOVE_SL": "移动止损",
+                "PARTIAL_TP": "部分止盈"
+            }
+            lines.append(f"{r['symbol']}")
+            lines.append(f"操作：{action_map.get(r['action'], r['action'])}")
+            lines.append(f"当前收益：{pnl:.2f}%")
+            lines.append(f"原因：{r.get('reason', '')}")
+            lines.append("")
+
+    if close_rows:
+        lines.append("━━━━━━━━━━━━━━")
+        lines.append("❌ 已平仓")
+        lines.append("━━━━━━━━━━━━━━")
+        lines.append("")
+        for r in close_rows[:5]:
+            pnl_pct = r.get("pnl_pct", 0.0)
+            pnl_usd = r.get("pnl_usd", 0.0)
+            lines.append(f"{r['symbol']}")
+            lines.append(f"结果：{r.get('reason', '')}")
+            lines.append(f"收益率：{pnl_pct:.2f}%")
+            lines.append(f"盈亏：{pnl_usd:.2f}U")
+            lines.append("")
+
+    open_rows = []
+    for symbol, pos in open_positions.items():
+        if pos.get("status") == "OPEN":
+            open_rows.append(pos)
+
+    if open_rows:
+        lines.append("━━━━━━━━━━━━━━")
+        lines.append("📌 当前持仓")
+        lines.append("━━━━━━━━━━━━━━")
+        lines.append("")
+        for pos in open_rows[:10]:
+            lines.append(f"{pos['symbol']}  {side_symbol(pos.get('side'))}")
+            lines.append(f"入场 {pos.get('entry')}")
+            lines.append(f"止盈 {pos.get('tp')}")
+            lines.append(f"止损 {pos.get('sl')}")
+            lines.append(f"保证金 {pos.get('margin', 0):.2f}U")
+            lines.append(f"名义仓位 {pos.get('notional', 0):.2f}U")
+            lines.append("")
+
+    if not entry_rows and not manage_rows and not close_rows:
+        lines.append("当前没有新的重要变化")
+
+    return "\n".join(lines)
+
+
+# =========================================================
+# 数据抓取
+# =========================================================
 def interval_to_ms(interval: str) -> int:
     mapping = {
         "1m": 60_000,
@@ -51,14 +300,13 @@ def interval_to_ms(interval: str) -> int:
 def normalize_candle_row(row):
     if not isinstance(row, (list, tuple)) or len(row) < 6:
         return None
-
     row = list(row)
     if len(row) >= 7:
         return row[:7]
     return row[:6] + [np.nan]
 
 
-def fetch_bitget(symbol, interval="5m", limit=20000, page_limit=1000, max_pages=25):
+def fetch_bitget(symbol, interval="5m", limit=1500, page_limit=1000, max_pages=6):
     url = "https://api.bitget.com/api/v2/mix/market/candles"
     step_ms = interval_to_ms(interval)
 
@@ -66,9 +314,7 @@ def fetch_bitget(symbol, interval="5m", limit=20000, page_limit=1000, max_pages=
     seen_ts = set()
     end_time = int(time.time() * 1000)
 
-    print(f"[{symbol}] start fetch, target={limit}")
-
-    for page in range(max_pages):
+    for _ in range(max_pages):
         params = {
             "symbol": symbol,
             "productType": "USDT-FUTURES",
@@ -79,12 +325,10 @@ def fetch_bitget(symbol, interval="5m", limit=20000, page_limit=1000, max_pages=
 
         r = requests.get(url, params=params, timeout=20)
         r.raise_for_status()
-
         payload = r.json()
         data = payload.get("data", [])
 
         if not data:
-            print(f"[{symbol}] page {page + 1}: empty")
             break
 
         batch = []
@@ -98,21 +342,16 @@ def fetch_bitget(symbol, interval="5m", limit=20000, page_limit=1000, max_pages=
                 batch.append(norm)
 
         if not batch:
-            print(f"[{symbol}] page {page + 1}: duplicated")
             break
 
         rows.extend(batch)
 
-        oldest = min(int(float(x[0])) for x in batch)
-        newest = max(int(float(x[0])) for x in batch)
-
-        print(f"[{symbol}] page {page + 1}: +{len(batch)} rows, {oldest} -> {newest}, total={len(rows)}")
-
         if len(rows) >= limit:
             break
 
+        oldest = min(int(float(x[0])) for x in batch)
         end_time = oldest - step_ms
-        time.sleep(0.08)
+        time.sleep(0.05)
 
     if not rows:
         return pd.DataFrame(columns=[
@@ -136,12 +375,11 @@ def fetch_bitget(symbol, interval="5m", limit=20000, page_limit=1000, max_pages=
     return df.tail(limit).reset_index(drop=True)
 
 
-# -------------------------------------------------
-# Indicators
-# -------------------------------------------------
-def calc_rsi(series, period=14):
+# =========================================================
+# 指标
+# =========================================================
+def calc_rsi(series: pd.Series, period: int = 14) -> pd.Series:
     delta = series.diff()
-
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
 
@@ -150,29 +388,23 @@ def calc_rsi(series, period=14):
 
     rs = avg_gain / avg_loss.replace(0, np.nan)
     rsi = 100 - (100 / (1 + rs))
-
     return rsi.fillna(50)
 
 
-def calc_atr(df, period=14):
-    high = df["high"]
-    low = df["low"]
-    close = df["close"]
-
+def calc_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
     tr = np.maximum(
-        high - low,
+        df["high"] - df["low"],
         np.maximum(
-            (high - close.shift()).abs(),
-            (low - close.shift()).abs()
+            (df["high"] - df["close"].shift()).abs(),
+            (df["low"] - df["close"].shift()).abs()
         )
     )
-
     return tr.rolling(period, min_periods=period).mean().bfill()
 
 
-def calc_vwap(df):
-    typical = (df["high"] + df["low"] + df["close"]) / 3
-    pv = typical * df["volume"]
+def calc_vwap(df: pd.DataFrame) -> pd.Series:
+    typical_price = (df["high"] + df["low"] + df["close"]) / 3
+    pv = typical_price * df["volume"]
 
     cum_pv = pv.cumsum()
     cum_vol = df["volume"].replace(0, np.nan).cumsum()
@@ -181,7 +413,7 @@ def calc_vwap(df):
     return vwap.replace([np.inf, -np.inf], np.nan).ffill().bfill()
 
 
-def add_indicators(df):
+def add_strategy_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     df["ema20"] = df["close"].ewm(span=20, adjust=False).mean()
@@ -191,25 +423,26 @@ def add_indicators(df):
     df["atr14"] = calc_atr(df, 14)
     df["vwap"] = calc_vwap(df)
 
-    df["ret"] = df["close"].pct_change().fillna(0.0)
-    df["ema_dev"] = df["close"] / df["ema20"] - 1
-    df["vwap_dev"] = df["close"] / df["vwap"] - 1
+    df["vwap_dev"] = (df["close"] - df["vwap"]) / df["vwap"]
+    df["ema_dev"] = (df["close"] - df["ema20"]) / df["ema20"]
+    df["ema_spread"] = (df["ema20"] - df["ema50"]) / df["close"]
+    df["atr_ratio"] = df["atr14"] / df["close"]
 
     return df
 
 
-# -------------------------------------------------
-# Market State
-# -------------------------------------------------
-def detect_market_state(df: pd.DataFrame) -> str:
+# =========================================================
+# 市场状态
+# =========================================================
+def detect_market_regime(df: pd.DataFrame) -> str:
     if len(df) < 60:
         return "UNKNOWN"
 
     last = df.iloc[-1]
-    ema_spread = abs(last["ema20"] - last["ema50"]) / max(last["close"], 1e-9)
-    atr_ratio = last["atr14"] / max(last["close"], 1e-9)
+    ema_spread = abs(float(last["ema_spread"]))
+    atr_ratio = float(last["atr_ratio"])
 
-    if ema_spread < 0.003 and atr_ratio < 0.015:
+    if ema_spread < 0.003 and atr_ratio < 0.02:
         return "RANGE"
 
     if last["ema20"] > last["ema50"]:
@@ -221,215 +454,468 @@ def detect_market_state(df: pd.DataFrame) -> str:
     return "NEUTRAL"
 
 
-# -------------------------------------------------
-# Strategies
-# -------------------------------------------------
-def generate_strategies(df):
-    strategies = {}
+# =========================================================
+# 策略
+# =========================================================
+def calc_signal_score(market: str, action: str, vwap_dev: float, ema_dev: float, rsi7: float) -> float:
+    score = 50.0
+    score += min(abs(vwap_dev) * 1500, 30)
+    score += min(abs(ema_dev) * 600, 15)
 
-    strategies["VWAP_1.5"] = np.where(
-        df["vwap_dev"] < -0.015, 1,
-        np.where(df["vwap_dev"] > 0.015, -1, 0)
-    )
+    if market == "RANGE":
+        score += 8
+    elif market in ("TREND_UP", "TREND_DOWN"):
+        score += 5
 
-    strategies["VWAP_2.0"] = np.where(
-        df["vwap_dev"] < -0.020, 1,
-        np.where(df["vwap_dev"] > 0.020, -1, 0)
-    )
+    if action == "long":
+        if rsi7 < 20:
+            score += 10
+        elif rsi7 < 30:
+            score += 6
+        elif rsi7 < 40:
+            score += 3
 
-    strategies["VWAP_2.5"] = np.where(
-        df["vwap_dev"] < -0.025, 1,
-        np.where(df["vwap_dev"] > 0.025, -1, 0)
-    )
+    if action == "short":
+        if rsi7 > 80:
+            score += 10
+        elif rsi7 > 70:
+            score += 6
+        elif rsi7 > 60:
+            score += 3
 
-    strategies["EMA_DEV_1.5"] = np.where(
-        df["ema_dev"] < -0.015, 1,
-        np.where(df["ema_dev"] > 0.015, -1, 0)
-    )
-
-    strategies["EMA_DEV_2.0"] = np.where(
-        df["ema_dev"] < -0.020, 1,
-        np.where(df["ema_dev"] > 0.020, -1, 0)
-    )
-
-    strategies["RSI_20_80"] = np.where(
-        df["rsi7"] < 20, 1,
-        np.where(df["rsi7"] > 80, -1, 0)
-    )
-
-    strategies["RSI_25_75"] = np.where(
-        df["rsi7"] < 25, 1,
-        np.where(df["rsi7"] > 75, -1, 0)
-    )
-
-    strategies["RSI_30_70"] = np.where(
-        df["rsi7"] < 30, 1,
-        np.where(df["rsi7"] > 70, -1, 0)
-    )
-
-    return strategies
+    return round(min(score, 100), 2)
 
 
-# -------------------------------------------------
-# Backtest
-# -------------------------------------------------
-def build_position(signal):
-    position = pd.Series(signal).replace(0, np.nan).ffill().fillna(0)
-    position = position.shift(1).fillna(0)
-    return position
+def strategy_decision(df: pd.DataFrame) -> dict:
+    df = add_strategy_indicators(df)
 
+    if len(df) < 100:
+        return {
+            "action": "neutral",
+            "market": "UNKNOWN",
+            "strategy": None,
+            "score": 0,
+            "entry": None,
+            "tp": None,
+            "sl": None,
+            "reason": "数据不足"
+        }
 
-def backtest_core(df, signal, fee=0.0006, slippage=0.0002):
-    position = build_position(signal)
-    ret = df["ret"]
+    last = df.iloc[-1]
 
-    gross = position * ret
-    trades = position.diff().abs().fillna(0)
-    cost = trades * (fee + slippage)
-    net = gross - cost
+    price = float(last["close"])
+    vwap = float(last["vwap"])
+    ema20 = float(last["ema20"])
+    atr = float(last["atr14"])
+    rsi7 = float(last["rsi7"])
+    vwap_dev = float(last["vwap_dev"])
+    ema_dev = float(last["ema_dev"])
 
-    equity = (1 + net).cumprod()
-    total_return = (equity.iloc[-1] - 1) * 100
+    market = detect_market_regime(df)
 
-    drawdown = equity / equity.cummax() - 1
-    max_dd = drawdown.min() * 100
+    action = "neutral"
+    strategy = None
+    tp = None
+    sl = None
+    reason = "暂无有效信号"
+    score = 0.0
 
-    std = net.std()
-    sharpe = 0.0
-    if pd.notna(std) and std > 0:
-        sharpe = net.mean() / std * np.sqrt(252 * 24 * 12)
+    if market == "RANGE":
+        if vwap_dev <= -0.025 and rsi7 < 35:
+            action = "long"
+            strategy = "VWAP_2.5"
+            tp = vwap
+            sl = price - atr
+            reason = "震荡市场中价格显著低于 VWAP，且 RSI 偏低，做多等回归"
 
-    trade_count = int((trades > 0).sum())
+        elif vwap_dev >= 0.025 and rsi7 > 65:
+            action = "short"
+            strategy = "VWAP_2.5"
+            tp = vwap
+            sl = price + atr
+            reason = "震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归"
 
-    active = net[position != 0]
-    win_rate = 0.0
-    if len(active) > 0:
-        win_rate = float((active > 0).mean())
+        elif vwap_dev <= -0.020 and rsi7 < 40:
+            action = "long"
+            strategy = "VWAP_2.0"
+            tp = vwap
+            sl = price - atr
+            reason = "震荡市场中价格低于 VWAP 2%，偏离足够，做多等回归"
 
-    # average holding bars
-    holding_lengths = []
-    current_len = 0
-    pos_arr = position.to_numpy()
+        elif vwap_dev >= 0.020 and rsi7 > 60:
+            action = "short"
+            strategy = "VWAP_2.0"
+            tp = vwap
+            sl = price + atr
+            reason = "震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归"
 
-    for i in range(len(pos_arr)):
-        if pos_arr[i] != 0:
-            current_len += 1
-        elif current_len > 0:
-            holding_lengths.append(current_len)
-            current_len = 0
-    if current_len > 0:
-        holding_lengths.append(current_len)
+        elif vwap_dev <= -0.015 and rsi7 < 35:
+            action = "long"
+            strategy = "VWAP_1.5"
+            tp = vwap
+            sl = price - atr
+            reason = "震荡市场中价格低于 VWAP 1.5%，轻仓做多等回归"
 
-    avg_holding = float(np.mean(holding_lengths)) if holding_lengths else 0.0
+        elif vwap_dev >= 0.015 and rsi7 > 65:
+            action = "short"
+            strategy = "VWAP_1.5"
+            tp = vwap
+            sl = price + atr
+            reason = "震荡市场中价格高于 VWAP 1.5%，轻仓做空等回归"
+
+    elif market == "TREND_UP":
+        if price < ema20 and rsi7 < 40:
+            action = "long"
+            strategy = "TrendPullback_Long"
+            tp = price + atr * CONFIG["atr_tp_mult"]
+            sl = price - atr * CONFIG["atr_stop_mult"]
+            reason = "上升趋势中回踩 EMA20，RSI 偏低，顺势做多"
+
+    elif market == "TREND_DOWN":
+        if price > ema20 and rsi7 > 60:
+            action = "short"
+            strategy = "TrendPullback_Short"
+            tp = price - atr * CONFIG["atr_tp_mult"]
+            sl = price + atr * CONFIG["atr_stop_mult"]
+            reason = "下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空"
+
+    if action != "neutral":
+        score = calc_signal_score(market, action, vwap_dev, ema_dev, rsi7)
 
     return {
-        "return_pct": float(total_return),
-        "max_dd_pct": float(max_dd),
-        "sharpe": float(sharpe),
-        "trades": trade_count,
-        "win_rate": float(win_rate),
-        "avg_holding_bars": avg_holding,
+        "action": action,
+        "market": market,
+        "strategy": strategy,
+        "score": score,
+        "entry": safe_round(price, 8) if action != "neutral" else None,
+        "tp": safe_round(tp, 8) if tp is not None else None,
+        "sl": safe_round(sl, 8) if sl is not None else None,
+        "reason": reason,
+        "rsi7": safe_round(rsi7, 4),
+        "vwap_dev_pct": safe_round(vwap_dev * 100, 4),
+        "ema_dev_pct": safe_round(ema_dev * 100, 4),
+        "atr": safe_round(atr, 8),
     }
 
 
-def train_test_backtest(df, signal, fee, slippage, train_ratio):
-    split_idx = int(len(df) * train_ratio)
+# =========================================================
+# 模拟账户
+# =========================================================
+def compute_position_size(account: dict, entry: float, sl: float):
+    equity = float(account["equity"])
+    risk_ratio = float(CONFIG["risk_per_trade"][CONFIG["risk_mode"]])
 
-    train_df = df.iloc[:split_idx].copy()
-    test_df = df.iloc[split_idx:].copy()
+    risk_amount = equity * risk_ratio
+    stop_distance_pct = abs(entry - sl) / max(entry, 1e-9)
 
-    train_signal = pd.Series(signal[:split_idx], index=train_df.index)
-    test_signal = pd.Series(signal[split_idx:], index=test_df.index)
+    if stop_distance_pct <= 0:
+        return None
 
-    train_res = backtest_core(train_df, train_signal, fee, slippage)
-    test_res = backtest_core(test_df, test_signal, fee, slippage)
-    full_res = backtest_core(df, pd.Series(signal, index=df.index), fee, slippage)
+    notional = risk_amount / stop_distance_pct
+    leverage = float(CONFIG["default_leverage"])
+    margin = notional / leverage
 
-    return train_res, test_res, full_res
+    max_margin = equity * float(CONFIG["max_margin_ratio"])
+    if margin > max_margin:
+        margin = max_margin
+        notional = margin * leverage
 
+    if margin > float(account["free_margin"]):
+        margin = float(account["free_margin"]) * 0.95
+        notional = margin * leverage
 
-# -------------------------------------------------
-# Realtime Signals
-# -------------------------------------------------
-def generate_live_signal(df, symbol, market):
-    last = df.iloc[-1]
-
-    action = None
-    strategy = None
-    entry = float(last["close"])
-    tp = None
-    sl = None
-
-    # Range markets: prioritize VWAP reversion
-    if market == "RANGE":
-        if last["vwap_dev"] < -0.02:
-            action = "LONG"
-            strategy = "VWAP_2.0"
-            tp = float(last["vwap"])
-            sl = float(last["close"] - last["atr14"])
-        elif last["vwap_dev"] > 0.02:
-            action = "SHORT"
-            strategy = "VWAP_2.0"
-            tp = float(last["vwap"])
-            sl = float(last["close"] + last["atr14"])
-        elif last["vwap_dev"] < -0.015:
-            action = "LONG"
-            strategy = "VWAP_1.5"
-            tp = float(last["vwap"])
-            sl = float(last["close"] - last["atr14"])
-        elif last["vwap_dev"] > 0.015:
-            action = "SHORT"
-            strategy = "VWAP_1.5"
-            tp = float(last["vwap"])
-            sl = float(last["close"] + last["atr14"])
-
-    # Trend markets: very light trend bias
-    elif market == "TREND_UP":
-        if last["close"] > last["ema20"] and last["rsi7"] < 35:
-            action = "LONG"
-            strategy = "TrendPullback"
-            tp = float(last["close"] + last["atr14"] * 1.5)
-            sl = float(last["close"] - last["atr14"])
-
-    elif market == "TREND_DOWN":
-        if last["close"] < last["ema20"] and last["rsi7"] > 65:
-            action = "SHORT"
-            strategy = "TrendPullback"
-            tp = float(last["close"] - last["atr14"] * 1.5)
-            sl = float(last["close"] + last["atr14"])
-
-    if action is None:
+    if margin <= 0 or notional <= 0:
         return None
 
     return {
-        "symbol": symbol,
-        "market": market,
-        "strategy": strategy,
-        "action": action,
-        "entry": entry,
-        "tp": tp,
-        "sl": sl,
-        "close": float(last["close"]),
-        "rsi7": float(last["rsi7"]),
-        "vwap_dev_pct": float(last["vwap_dev"] * 100),
-        "ema_dev_pct": float(last["ema_dev"] * 100),
+        "risk_amount": safe_round(risk_amount, 4),
+        "stop_distance_pct": safe_round(stop_distance_pct * 100, 4),
+        "margin": safe_round(margin, 4),
+        "notional": safe_round(notional, 4),
+        "leverage": leverage
     }
 
 
-# -------------------------------------------------
-# Main
-# -------------------------------------------------
+def calculate_unrealized_pnl(side: str, entry: float, current: float, notional: float):
+    qty = notional / max(entry, 1e-9)
+    if side == "LONG":
+        return (current - entry) * qty
+    return (entry - current) * qty
+
+
+def update_account_snapshot(account: dict, positions: dict, latest_market: dict):
+    unrealized = 0.0
+    used_margin = 0.0
+
+    for symbol, pos in positions.items():
+        if pos.get("status") != "OPEN":
+            continue
+        if symbol not in latest_market:
+            continue
+
+        current = float(latest_market[symbol]["df"].iloc[-1]["close"])
+        entry = float(pos["entry"])
+        notional = float(pos["notional"])
+        side = pos["side"]
+
+        unrealized += calculate_unrealized_pnl(side, entry, current, notional)
+        used_margin += float(pos["margin"])
+
+    account["used_margin"] = safe_round(used_margin, 4)
+    account["unrealized_pnl"] = safe_round(unrealized, 4)
+    account["equity"] = safe_round(account["cash_balance"] + unrealized, 4)
+    account["free_margin"] = safe_round(account["equity"] - used_margin, 4)
+
+
+def apply_open_fee(account: dict, notional: float):
+    fee = notional * float(CONFIG["fee_rate"] + CONFIG["slippage_rate"])
+    account["cash_balance"] -= fee
+    account["total_fees"] += fee
+    return fee
+
+
+def apply_funding(account: dict, positions: dict):
+    funding_rate = float(CONFIG["funding_rate_per_cycle"])
+    total = 0.0
+
+    for _, pos in positions.items():
+        if pos.get("status") != "OPEN":
+            continue
+        notional = float(pos.get("notional", 0))
+        fee = notional * funding_rate
+        account["cash_balance"] -= fee
+        account["funding_paid"] += fee
+        total += fee
+
+    return total
+
+
+# =========================================================
+# 持仓管理
+# =========================================================
+def current_pnl_pct(side: str, entry: float, current: float) -> float:
+    if side == "LONG":
+        return (current / entry - 1) * 100
+    return (entry / current - 1) * 100
+
+
+def close_position(account: dict, pos: dict, current: float, reason: str):
+    side = pos["side"]
+    entry = float(pos["entry"])
+    notional = float(pos["notional"])
+    qty = notional / max(entry, 1e-9)
+
+    if side == "LONG":
+        pnl = (current - entry) * qty
+    else:
+        pnl = (entry - current) * qty
+
+    close_fee = notional * float(CONFIG["fee_rate"] + CONFIG["slippage_rate"])
+    pnl_after_fee = pnl - close_fee
+
+    account["cash_balance"] += pnl_after_fee
+    account["realized_pnl"] += pnl_after_fee
+    account["total_fees"] += close_fee
+
+    pos["status"] = "CLOSED"
+    pos["closed_at"] = local_now_str()
+    pos["exit_price"] = safe_round(current, 8)
+    pos["exit_reason"] = reason
+    pos["realized_pnl"] = safe_round(pnl_after_fee, 4)
+
+    return pnl_after_fee
+
+
+def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str, account: dict):
+    last = df.iloc[-1]
+    current = float(last["close"])
+    atr = float(last["atr14"])
+    ema20 = float(last["ema20"])
+    vwap = float(last["vwap"])
+
+    side = pos["side"]
+    entry = float(pos["entry"])
+    tp = float(pos["tp"])
+    sl = float(pos["sl"])
+    status = pos.get("status", "OPEN")
+    partial_taken = bool(pos.get("partial_taken", False))
+    size = float(pos.get("size", 1.0))
+
+    result = {
+        "symbol": symbol,
+        "action": "HOLD",
+        "reason": "",
+        "current_price": safe_round(current, 8),
+        "pnl_pct": safe_round(current_pnl_pct(side, entry, current), 4),
+        "pnl_usd": safe_round(calculate_unrealized_pnl(side, entry, current, float(pos["notional"])), 4),
+        "market": market,
+        "strategy": pos.get("strategy", "-"),
+        "side": side,
+        "entry": entry,
+        "tp": tp,
+        "sl": sl,
+    }
+
+    if status != "OPEN":
+        result["action"] = "CLOSED"
+        result["reason"] = "position already closed"
+        return pos, result
+
+    if side == "LONG":
+        if current <= sl:
+            pnl_after_fee = close_position(account, pos, current, "STOP_LOSS")
+            result["action"] = "CLOSE"
+            result["reason"] = "触发止损"
+            result["pnl_usd"] = safe_round(pnl_after_fee, 4)
+            return pos, result
+
+        if current >= tp:
+            pnl_after_fee = close_position(account, pos, current, "TAKE_PROFIT")
+            result["action"] = "CLOSE"
+            result["reason"] = "触发止盈"
+            result["pnl_usd"] = safe_round(pnl_after_fee, 4)
+            return pos, result
+
+    else:
+        if current >= sl:
+            pnl_after_fee = close_position(account, pos, current, "STOP_LOSS")
+            result["action"] = "CLOSE"
+            result["reason"] = "触发止损"
+            result["pnl_usd"] = safe_round(pnl_after_fee, 4)
+            return pos, result
+
+        if current <= tp:
+            pnl_after_fee = close_position(account, pos, current, "TAKE_PROFIT")
+            result["action"] = "CLOSE"
+            result["reason"] = "触发止盈"
+            result["pnl_usd"] = safe_round(pnl_after_fee, 4)
+            return pos, result
+
+    if not partial_taken:
+        if side == "LONG" and current >= entry + atr:
+            pos["partial_taken"] = True
+            pos["size"] = safe_round(size * (1 - CONFIG["partial_tp_ratio"]), 4)
+            pos["sl"] = safe_round(max(sl, entry), 8)
+            result["action"] = "PARTIAL_TP"
+            result["reason"] = "达到第一目标，部分止盈并上移止损到入场附近"
+            return pos, result
+
+        if side == "SHORT" and current <= entry - atr:
+            pos["partial_taken"] = True
+            pos["size"] = safe_round(size * (1 - CONFIG["partial_tp_ratio"]), 4)
+            pos["sl"] = safe_round(min(sl, entry), 8)
+            result["action"] = "PARTIAL_TP"
+            result["reason"] = "达到第一目标，部分止盈并下移止损到入场附近"
+            return pos, result
+
+    move_trigger = float(CONFIG["move_sl_after_profit_atr"]) * atr
+    if side == "LONG" and current >= entry + move_trigger:
+        new_sl = safe_round(max(sl, ema20, entry), 8)
+        if new_sl > sl:
+            pos["sl"] = new_sl
+            result["action"] = "MOVE_SL"
+            result["reason"] = "盈利扩大，上移止损"
+            return pos, result
+
+    if side == "SHORT" and current <= entry - move_trigger:
+        new_sl = safe_round(min(sl, ema20, entry), 8)
+        if new_sl < sl:
+            pos["sl"] = new_sl
+            result["action"] = "MOVE_SL"
+            result["reason"] = "盈利扩大，下移止损"
+            return pos, result
+
+    if pos.get("strategy", "").startswith("VWAP_") and market not in ("RANGE", "NEUTRAL"):
+        if side == "LONG" and current > vwap:
+            result["action"] = "HOLD"
+            result["reason"] = "价格仍在回归，继续持有"
+            return pos, result
+        if side == "SHORT" and current < vwap:
+            result["action"] = "HOLD"
+            result["reason"] = "价格仍在回归，继续持有"
+            return pos, result
+
+    result["action"] = "HOLD"
+    result["reason"] = "结构未失效，继续持有"
+    return pos, result
+
+
+# =========================================================
+# 摘要
+# =========================================================
+def build_summary(account: dict, market_rows: list[dict], open_positions: dict, decision_rows: list[dict], new_signals: list[dict]):
+    lines = []
+    lines.append(f"Version: {VERSION}")
+    lines.append(f"Generated At: {local_now_str()}")
+    lines.append("")
+
+    lines.append("=== ACCOUNT ===")
+    lines.append(pd.DataFrame([account]).to_string(index=False))
+    lines.append("")
+
+    lines.append("=== MARKET STATES ===")
+    if market_rows:
+        lines.append(pd.DataFrame(market_rows).to_string(index=False))
+    else:
+        lines.append("No market data.")
+    lines.append("")
+
+    lines.append("=== OPEN POSITIONS ===")
+    open_rows = []
+    for symbol, pos in open_positions.items():
+        if pos.get("status") == "OPEN":
+            open_rows.append({
+                "symbol": symbol,
+                "side": pos.get("side"),
+                "strategy": pos.get("strategy"),
+                "entry": pos.get("entry"),
+                "tp": pos.get("tp"),
+                "sl": pos.get("sl"),
+                "margin": pos.get("margin"),
+                "notional": pos.get("notional"),
+                "size": pos.get("size"),
+                "opened_at": pos.get("opened_at"),
+            })
+    if open_rows:
+        lines.append(pd.DataFrame(open_rows).to_string(index=False))
+    else:
+        lines.append("No open positions.")
+    lines.append("")
+
+    lines.append("=== POSITION DECISIONS ===")
+    if decision_rows:
+        lines.append(pd.DataFrame(decision_rows).to_string(index=False))
+    else:
+        lines.append("No position decisions.")
+    lines.append("")
+
+    lines.append("=== NEW ENTRY SIGNALS ===")
+    if new_signals:
+        lines.append(pd.DataFrame(new_signals).to_string(index=False))
+    else:
+        lines.append("No new entry signals.")
+
+    return "\n".join(lines)
+
+
+# =========================================================
+# 主程序
+# =========================================================
 def main():
-    ensure_dir()
+    ensure_dirs()
 
-    all_rows = []
-    best_rows = []
-    signal_rows = []
+    positions = load_positions()
+    account = load_account()
 
+    decision_logs = []
+    market_rows = []
+    new_signals = []
+    latest_market = {}
+
+    # 1. 扫市场
     for sym in CONFIG["symbols"]:
         try:
             print("processing", sym)
-
             df = fetch_bitget(
                 sym,
                 interval=CONFIG["interval"],
@@ -438,146 +924,211 @@ def main():
                 max_pages=CONFIG["max_pages"]
             )
 
-            if df.empty or len(df) < CONFIG["min_rows"]:
-                print(f"skip {sym}, insufficient data: {len(df)}")
+            if df.empty or len(df) < 300:
                 continue
 
-            df = add_indicators(df)
-            market = detect_market_state(df)
-            strategy_dict = generate_strategies(df)
+            decision = strategy_decision(df)
+            latest_market[sym] = {
+                "df": add_strategy_indicators(df),
+                "market": decision["market"],
+                "decision": decision,
+            }
 
-            symbol_rows = []
-
-            for name, signal in strategy_dict.items():
-                train_res, test_res, full_res = train_test_backtest(
-                    df,
-                    signal,
-                    CONFIG["fee"],
-                    CONFIG["slippage"],
-                    CONFIG["train_ratio"]
-                )
-
-                row = {
-                    "symbol": sym,
-                    "market": market,
-                    "strategy": name,
-
-                    "train_return_pct": train_res["return_pct"],
-                    "train_max_dd_pct": train_res["max_dd_pct"],
-                    "train_sharpe": train_res["sharpe"],
-                    "train_trades": train_res["trades"],
-                    "train_win_rate": train_res["win_rate"],
-
-                    "test_return_pct": test_res["return_pct"],
-                    "test_max_dd_pct": test_res["max_dd_pct"],
-                    "test_sharpe": test_res["sharpe"],
-                    "test_trades": test_res["trades"],
-                    "test_win_rate": test_res["win_rate"],
-
-                    "full_return_pct": full_res["return_pct"],
-                    "full_max_dd_pct": full_res["max_dd_pct"],
-                    "full_sharpe": full_res["sharpe"],
-                    "full_trades": full_res["trades"],
-                    "full_win_rate": full_res["win_rate"],
-                    "avg_holding_bars": full_res["avg_holding_bars"],
-                }
-
-                # score: prioritize test performance
-                score = (
-                    row["test_return_pct"] * 1.5
-                    + row["test_sharpe"] * 8
-                    - abs(row["test_max_dd_pct"]) * 1.2
-                    + row["test_win_rate"] * 10
-                )
-                row["score"] = score
-
-                all_rows.append(row)
-                symbol_rows.append(row)
-
-            if symbol_rows:
-                best = pd.DataFrame(symbol_rows).sort_values(
-                    ["score", "test_return_pct", "test_sharpe"],
-                    ascending=[False, False, False]
-                ).iloc[0].to_dict()
-                best_rows.append(best)
-
-            live_signal = generate_live_signal(df, sym, market)
-            if live_signal is not None:
-                signal_rows.append(live_signal)
+            market_rows.append({
+                "symbol": sym,
+                "market": decision["market"],
+                "close": decision["entry"],
+                "rsi7": decision.get("rsi7"),
+                "vwap_dev_pct": decision.get("vwap_dev_pct"),
+                "ema_dev_pct": decision.get("ema_dev_pct"),
+                "score": decision.get("score", 0),
+            })
 
         except Exception as e:
-            print(f"error on {sym}: {e}")
+            decision_logs.append({
+                "time": local_now_str(),
+                "symbol": sym,
+                "type": "SYSTEM",
+                "action": "ERROR",
+                "reason": str(e),
+            })
 
-    if not all_rows:
-        with open("latest_summary.txt", "w", encoding="utf-8") as f:
-            f.write("No valid results generated.")
-        print("No valid results generated.")
-        return
+    # 2. 收资金费
+    funding_paid = apply_funding(account, positions)
+    if funding_paid > 0:
+        decision_logs.append({
+            "time": local_now_str(),
+            "symbol": "ACCOUNT",
+            "type": "ACCOUNT",
+            "action": "FUNDING",
+            "reason": f"本轮收取资金费 {funding_paid:.4f}U",
+        })
 
-    all_df = pd.DataFrame(all_rows)
-    best_df = pd.DataFrame(best_rows)
-    signal_df = pd.DataFrame(signal_rows)
+    # 3. 更新持仓
+    for symbol, pos in list(positions.items()):
+        if pos.get("status") != "OPEN":
+            continue
 
-    all_df = all_df.sort_values(
-        ["score", "test_return_pct", "test_sharpe"],
-        ascending=[False, False, False]
-    ).reset_index(drop=True)
+        if symbol not in latest_market:
+            decision_logs.append({
+                "time": local_now_str(),
+                "symbol": symbol,
+                "type": "POSITION",
+                "action": "SKIP",
+                "reason": "缺少最新市场数据",
+            })
+            continue
 
-    best_df = best_df.sort_values(
-        ["score", "test_return_pct", "test_sharpe"],
-        ascending=[False, False, False]
-    ).reset_index(drop=True)
-
-    now = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    rank_path = f"{REPORT_DIR}/strategy_rank_{now}.csv"
-    best_path = f"{REPORT_DIR}/best_per_symbol_{now}.csv"
-    signal_path = f"{REPORT_DIR}/signals_{now}.csv"
-
-    all_df.to_csv(rank_path, index=False, encoding="utf-8-sig")
-    best_df.to_csv(best_path, index=False, encoding="utf-8-sig")
-    signal_df.to_csv(signal_path, index=False, encoding="utf-8-sig")
-
-    summary_lines = []
-    summary_lines.append(f"Version: {VERSION}")
-    summary_lines.append(f"Generated At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    summary_lines.append("")
-    summary_lines.append("=== TOP 20 STRATEGIES ===")
-    summary_lines.append(
-        all_df[[
-            "symbol", "market", "strategy",
-            "test_return_pct", "test_max_dd_pct", "test_sharpe",
-            "test_trades", "test_win_rate", "score"
-        ]].head(20).to_string(index=False)
-    )
-    summary_lines.append("")
-    summary_lines.append("=== BEST PER SYMBOL ===")
-    if not best_df.empty:
-        summary_lines.append(
-            best_df[[
-                "symbol", "market", "strategy",
-                "test_return_pct", "test_max_dd_pct", "test_sharpe",
-                "test_trades", "test_win_rate", "score"
-            ]].to_string(index=False)
+        updated_pos, decision = update_position(
+            symbol,
+            pos,
+            latest_market[symbol]["df"],
+            latest_market[symbol]["market"],
+            account
         )
-    else:
-        summary_lines.append("No best rows.")
 
-    summary_lines.append("")
-    summary_lines.append("=== LIVE SIGNALS ===")
-    if not signal_df.empty:
-        summary_lines.append(signal_df.to_string(index=False))
-    else:
-        summary_lines.append("No live signals.")
+        positions[symbol] = updated_pos
 
-    with open("latest_summary.txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(summary_lines))
+        decision_logs.append({
+            "time": local_now_str(),
+            "symbol": symbol,
+            "type": "POSITION",
+            "action": decision["action"],
+            "reason": decision["reason"],
+            "current_price": decision["current_price"],
+            "pnl_pct": decision["pnl_pct"],
+            "pnl_usd": decision["pnl_usd"],
+            "market": decision["market"],
+            "strategy": decision["strategy"],
+            "side": decision["side"],
+            "entry": decision["entry"],
+            "tp": decision["tp"],
+            "sl": decision["sl"],
+        })
 
-    print("\n".join(summary_lines))
+    # 4. 账户快照
+    update_account_snapshot(account, positions, latest_market)
+
+    # 5. 新开仓
+    open_count = sum(1 for p in positions.values() if p.get("status") == "OPEN")
+    slots_left = max(int(CONFIG["max_open_positions"]) - open_count, 0)
+
+    if slots_left > 0:
+        candidates = []
+
+        for sym, pack in latest_market.items():
+            if sym in positions and positions[sym].get("status") == "OPEN":
+                continue
+
+            signal = pack["decision"]
+            if signal["action"] == "neutral":
+                continue
+            if signal["score"] < CONFIG["min_signal_score"]:
+                continue
+
+            candidates.append({
+                "symbol": sym,
+                **signal
+            })
+
+        candidates = sorted(candidates, key=lambda x: x["score"], reverse=True)
+
+        for signal in candidates[:slots_left]:
+            sizing = compute_position_size(account, signal["entry"], signal["sl"])
+            if sizing is None:
+                continue
+
+            open_fee = apply_open_fee(account, sizing["notional"])
+
+            side = "LONG" if signal["action"] == "long" else "SHORT"
+
+            positions[signal["symbol"]] = {
+                "symbol": signal["symbol"],
+                "side": side,
+                "strategy": signal["strategy"],
+                "market": signal["market"],
+                "entry": signal["entry"],
+                "tp": signal["tp"],
+                "sl": signal["sl"],
+                "size": 1.0,
+                "status": "OPEN",
+                "partial_taken": False,
+                "opened_at": local_now_str(),
+                "last_score": signal["score"],
+                "margin": sizing["margin"],
+                "notional": sizing["notional"],
+                "leverage": sizing["leverage"],
+                "risk_amount": sizing["risk_amount"],
+                "stop_distance_pct": sizing["stop_distance_pct"],
+            }
+
+            new_signals.append({
+                "symbol": signal["symbol"],
+                "market": signal["market"],
+                "strategy": signal["strategy"],
+                "action": side,
+                "entry": signal["entry"],
+                "tp": signal["tp"],
+                "sl": signal["sl"],
+                "score": signal["score"],
+                "reason": signal["reason"],
+                "margin": sizing["margin"],
+                "notional": sizing["notional"],
+                "leverage": sizing["leverage"],
+                "risk_amount": sizing["risk_amount"],
+                "open_fee": safe_round(open_fee, 4),
+            })
+
+            decision_logs.append({
+                "time": local_now_str(),
+                "symbol": signal["symbol"],
+                "type": "ENTRY",
+                "action": "OPEN",
+                "reason": signal["reason"],
+                "current_price": signal["entry"],
+                "pnl_pct": 0.0,
+                "pnl_usd": 0.0,
+                "market": signal["market"],
+                "strategy": signal["strategy"],
+                "side": side,
+                "entry": signal["entry"],
+                "tp": signal["tp"],
+                "sl": signal["sl"],
+                "margin": sizing["margin"],
+                "notional": sizing["notional"],
+            })
+
+    # 6. 再更新账户
+    update_account_snapshot(account, positions, latest_market)
+
+    # 7. 保存
+    save_positions(positions)
+    save_account(account)
+    append_decision_logs(decision_logs)
+
+    pd.DataFrame(new_signals).to_csv(SIGNALS_PATH, index=False, encoding="utf-8-sig")
+
+    summary_text = build_summary(
+        account=account,
+        market_rows=market_rows,
+        open_positions=positions,
+        decision_rows=decision_logs,
+        new_signals=new_signals
+    )
+
+    with open(SUMMARY_PATH, "w", encoding="utf-8") as f:
+        f.write(summary_text)
+
+    telegram_text = build_telegram_text(account, new_signals, decision_logs, positions)
+    send_telegram_message(telegram_text)
+
+    print(summary_text)
     print("")
-    print("saved:", rank_path)
-    print("saved:", best_path)
-    print("saved:", signal_path)
+    print(f"saved: {POSITIONS_PATH}")
+    print(f"saved: {ACCOUNT_PATH}")
+    print(f"saved: {SIGNALS_PATH}")
+    print(f"saved: {DECISION_LOG_PATH}")
+    print(f"saved: {SUMMARY_PATH}")
 
 
 if __name__ == "__main__":

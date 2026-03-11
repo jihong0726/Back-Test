@@ -1,34 +1,52 @@
-name: 多市场策略实验室
+name: Backtest
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   run-backtest:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: 安装依赖
-        run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy requests
 
-      - name: 执行回测
-        run: python backtest.py > latest_summary.txt
+      - name: Run backtest
+        run: python backtest.py
 
-      - name: 上传结果
+      - name: Show generated files
+        run: |
+          echo "=== root ==="
+          ls -lah
+          echo "=== reports ==="
+          ls -lah reports || true
+
+      - name: Upload latest summary
         uses: actions/upload-artifact@v4
         with:
-          name: backtest-results
-          path: |
-            latest_summary.txt
-            outputs/**
+          name: latest-summary
+          path: latest_summary.txt
+
+      - name: Upload reports folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-reports
+          path: reports/
+
+      - name: Zip reports
+        run: zip -r backtest_reports.zip reports latest_summary.txt
+
+      - name: Upload zip package
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-package
+          path: backtest_reports.zip

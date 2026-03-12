@@ -7,43 +7,56 @@ import numpy as np
 import pandas as pd
 import requests
 
-VERSION = "V13_MARKET_SCAN_ENGINE"
+VERSION = "V13.1_MARKET_SCAN_ENGINE_OPT"
 
 CONFIG = {
     "symbols": [
         "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT", "BNBUSDT",
         "ADAUSDT", "AVAXUSDT", "LINKUSDT", "LTCUSDT",
-        "MATICUSDT", "APTUSDT", "SUIUSDT", "ARBUSDT", "OPUSDT",
+        "APTUSDT", "SUIUSDT", "ARBUSDT", "OPUSDT",
         "ATOMUSDT", "NEARUSDT", "DOTUSDT", "FILUSDT", "INJUSDT"
     ],
     "interval": "5m",
     "bars": 1500,
     "page_limit": 1000,
     "max_pages": 6,
-    "max_open_positions": 5,
-    "min_signal_score": 68,
 
+    # 持仓控制
+    "max_open_positions": 3,
+    "max_same_direction_positions": 2,
+
+    # 信号门槛
+    "min_signal_score": 75,
+
+    # 交易成本
     "fee_rate": 0.0006,
     "slippage_rate": 0.0002,
     "funding_rate_per_cycle": 0.00002,
 
-    "risk_mode": "standard",   # conservative / standard / aggressive
+    # 风险参数
+    "risk_mode": "conservative",   # conservative / standard / aggressive
     "risk_per_trade": {
         "conservative": 0.005,
         "standard": 0.01,
         "aggressive": 0.02
     },
-    "max_margin_ratio": 0.25,
-    "default_leverage": 5,
+    "max_margin_ratio": 0.12,
+    "default_leverage": 3,
 
+    # 止盈止损
     "atr_stop_mult": 1.0,
-    "atr_tp_mult": 1.8,
+    "atr_tp_mult": 1.6,
     "partial_tp_ratio": 0.5,
-    "move_sl_after_profit_atr": 1.0,
+    "move_sl_after_profit_atr": 0.8,
 
+    # 模拟账户
     "initial_balance": 10000.0,
 
-    "top_n_scan": 5
+    # 市场扫描
+    "top_n_scan": 5,
+
+    # 过滤过度波动品种
+    "max_atr_ratio_for_entry": 0.06
 }
 
 STATE_DIR = "state"
@@ -217,7 +230,7 @@ def build_telegram_text(
     run_info = get_next_run_info()
 
     lines = []
-    lines.append("📊 模拟交易引擎 V13")
+    lines.append("📊 模拟交易引擎 V13.1")
     lines.append(f"当前时间：{run_info['now']}")
     lines.append(f"下一次建议时间：{run_info['next_run']}")
     lines.append(f"距离下一次建议：约 {run_info['minutes_left']} 分 {run_info['seconds_left']} 秒")
@@ -538,13 +551,13 @@ def detect_market_regime(df: pd.DataFrame) -> str:
 # =========================================================
 def calc_signal_score(market: str, action: str, vwap_dev: float, ema_dev: float, rsi7: float) -> float:
     score = 50.0
-    score += min(abs(vwap_dev) * 1500, 30)
-    score += min(abs(ema_dev) * 600, 15)
+    score += min(abs(vwap_dev) * 1500, 28)
+    score += min(abs(ema_dev) * 550, 12)
 
     if market == "RANGE":
         score += 8
     elif market in ("TREND_UP", "TREND_DOWN"):
-        score += 5
+        score += 4
 
     if action == "long":
         if rsi7 < 20:
@@ -552,7 +565,7 @@ def calc_signal_score(market: str, action: str, vwap_dev: float, ema_dev: float,
         elif rsi7 < 30:
             score += 6
         elif rsi7 < 40:
-            score += 3
+            score += 2
 
     if action == "short":
         if rsi7 > 80:
@@ -560,7 +573,7 @@ def calc_signal_score(market: str, action: str, vwap_dev: float, ema_dev: float,
         elif rsi7 > 70:
             score += 6
         elif rsi7 > 60:
-            score += 3
+            score += 2
 
     return round(min(score, 100), 2)
 
@@ -586,6 +599,7 @@ def strategy_decision(df: pd.DataFrame) -> dict:
     vwap = float(last["vwap"])
     ema20 = float(last["ema20"])
     atr = float(last["atr14"])
+    atr_ratio = float(last["atr_ratio"])
     rsi7 = float(last["rsi7"])
     vwap_dev = float(last["vwap_dev"])
     ema_dev = float(last["ema_dev"])
@@ -599,51 +613,50 @@ def strategy_decision(df: pd.DataFrame) -> dict:
     reason = "暂无有效信号"
     score = 0.0
 
+    # 过滤极高波动
+    if atr_ratio > CONFIG["max_atr_ratio_for_entry"]:
+        return {
+            "action": "neutral",
+            "market": market,
+            "strategy": None,
+            "score": 0,
+            "entry": safe_round(price, 8),
+            "tp": None,
+            "sl": None,
+            "reason": "波动过大，跳过"
+        }
+
     if market == "RANGE":
-        if vwap_dev <= -0.025 and rsi7 < 35:
+        if vwap_dev <= -0.025 and rsi7 < 32:
             action = "long"
             strategy = "VWAP_2.5"
             tp = vwap
             sl = price - atr
             reason = "震荡市场中价格显著低于 VWAP，且 RSI 偏低，做多等回归"
 
-        elif vwap_dev >= 0.025 and rsi7 > 65:
+        elif vwap_dev >= 0.025 and rsi7 > 68:
             action = "short"
             strategy = "VWAP_2.5"
             tp = vwap
             sl = price + atr
             reason = "震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归"
 
-        elif vwap_dev <= -0.020 and rsi7 < 40:
+        elif vwap_dev <= -0.020 and rsi7 < 35:
             action = "long"
             strategy = "VWAP_2.0"
             tp = vwap
             sl = price - atr
             reason = "震荡市场中价格低于 VWAP 2%，偏离足够，做多等回归"
 
-        elif vwap_dev >= 0.020 and rsi7 > 60:
+        elif vwap_dev >= 0.020 and rsi7 > 65:
             action = "short"
             strategy = "VWAP_2.0"
             tp = vwap
             sl = price + atr
             reason = "震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归"
 
-        elif vwap_dev <= -0.015 and rsi7 < 35:
-            action = "long"
-            strategy = "VWAP_1.5"
-            tp = vwap
-            sl = price - atr
-            reason = "震荡市场中价格低于 VWAP 1.5%，轻仓做多等回归"
-
-        elif vwap_dev >= 0.015 and rsi7 > 65:
-            action = "short"
-            strategy = "VWAP_1.5"
-            tp = vwap
-            sl = price + atr
-            reason = "震荡市场中价格高于 VWAP 1.5%，轻仓做空等回归"
-
     elif market == "TREND_UP":
-        if price < ema20 and rsi7 < 40:
+        if price < ema20 and rsi7 < 35:
             action = "long"
             strategy = "TrendPullback_Long"
             tp = price + atr * CONFIG["atr_tp_mult"]
@@ -651,7 +664,7 @@ def strategy_decision(df: pd.DataFrame) -> dict:
             reason = "上升趋势中回踩 EMA20，RSI 偏低，顺势做多"
 
     elif market == "TREND_DOWN":
-        if price > ema20 and rsi7 > 60:
+        if price > ema20 and rsi7 > 65:
             action = "short"
             strategy = "TrendPullback_Short"
             tp = price - atr * CONFIG["atr_tp_mult"]
@@ -666,7 +679,7 @@ def strategy_decision(df: pd.DataFrame) -> dict:
         "market": market,
         "strategy": strategy,
         "score": score,
-        "entry": safe_round(price, 8) if action != "neutral" else None,
+        "entry": safe_round(price, 8),
         "tp": safe_round(tp, 8) if tp is not None else None,
         "sl": safe_round(sl, 8) if sl is not None else None,
         "reason": reason,
@@ -674,6 +687,7 @@ def strategy_decision(df: pd.DataFrame) -> dict:
         "vwap_dev_pct": safe_round(vwap_dev * 100, 4),
         "ema_dev_pct": safe_round(ema_dev * 100, 4),
         "atr": safe_round(atr, 8),
+        "atr_ratio_pct": safe_round(atr_ratio * 100, 4),
     }
 
 
@@ -829,16 +843,18 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str, accou
     partial_taken = bool(pos.get("partial_taken", False))
     size = float(pos.get("size", 1.0))
 
+    current_pnl = safe_round(
+        calculate_unrealized_pnl(side, entry, current, float(pos.get("notional", 0) or 0)),
+        4
+    )
+
     result = {
         "symbol": symbol,
         "action": "HOLD",
         "reason": "",
         "current_price": safe_round(current, 8),
         "pnl_pct": safe_round(current_pnl_pct(side, entry, current), 4),
-        "pnl_usd": safe_round(
-            calculate_unrealized_pnl(side, entry, current, float(pos.get("notional", 0) or 0)),
-            4
-        ),
+        "pnl_usd": current_pnl,
         "market": market,
         "strategy": pos.get("strategy", "-"),
         "side": side,
@@ -852,11 +868,13 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str, accou
         result["reason"] = "position already closed"
         return pos, result
 
+    # LONG
     if side == "LONG":
         if current <= sl:
-            pnl_after_fee = close_position(account, pos, current, "STOP_LOSS")
+            exit_reason = "PROTECTIVE_EXIT" if current_pnl and current_pnl > 0 else "STOP_LOSS"
+            pnl_after_fee = close_position(account, pos, current, exit_reason)
             result["action"] = "CLOSE"
-            result["reason"] = "触发止损"
+            result["reason"] = "保护止盈离场" if exit_reason == "PROTECTIVE_EXIT" else "触发止损"
             result["pnl_usd"] = safe_round(pnl_after_fee, 4)
             return pos, result
 
@@ -867,11 +885,13 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str, accou
             result["pnl_usd"] = safe_round(pnl_after_fee, 4)
             return pos, result
 
+    # SHORT
     else:
         if current >= sl:
-            pnl_after_fee = close_position(account, pos, current, "STOP_LOSS")
+            exit_reason = "PROTECTIVE_EXIT" if current_pnl and current_pnl > 0 else "STOP_LOSS"
+            pnl_after_fee = close_position(account, pos, current, exit_reason)
             result["action"] = "CLOSE"
-            result["reason"] = "触发止损"
+            result["reason"] = "保护止盈离场" if exit_reason == "PROTECTIVE_EXIT" else "触发止损"
             result["pnl_usd"] = safe_round(pnl_after_fee, 4)
             return pos, result
 
@@ -882,6 +902,7 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str, accou
             result["pnl_usd"] = safe_round(pnl_after_fee, 4)
             return pos, result
 
+    # Partial TP
     if not partial_taken:
         if side == "LONG" and current >= entry + atr:
             pos["partial_taken"] = True
@@ -899,6 +920,7 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str, accou
             result["reason"] = "达到第一目标，部分止盈并下移止损到入场附近"
             return pos, result
 
+    # Move SL
     move_trigger = float(CONFIG["move_sl_after_profit_atr"]) * atr
     if side == "LONG" and current >= entry + move_trigger:
         new_sl = safe_round(max(sl, ema20, entry), 8)
@@ -916,6 +938,7 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str, accou
             result["reason"] = "盈利扩大，下移止损"
             return pos, result
 
+    # Structure check
     if pos.get("strategy", "").startswith("VWAP_") and market not in ("RANGE", "NEUTRAL"):
         if side == "LONG" and current > vwap:
             result["action"] = "HOLD"
@@ -955,6 +978,7 @@ def build_market_scan(latest_market: dict):
             "rsi7": signal.get("rsi7"),
             "vwap_dev_pct": signal.get("vwap_dev_pct"),
             "ema_dev_pct": signal.get("ema_dev_pct"),
+            "atr_ratio_pct": signal.get("atr_ratio_pct"),
         })
 
     scan_df = pd.DataFrame(scan_rows)
@@ -1071,9 +1095,12 @@ def main():
             if raw_df.empty or len(raw_df) < 300:
                 continue
 
+            enriched_df = add_strategy_indicators(raw_df)
             decision = strategy_decision(raw_df)
+            latest_close = float(enriched_df.iloc[-1]["close"])
+
             latest_market[sym] = {
-                "df": add_strategy_indicators(raw_df),
+                "df": enriched_df,
                 "market": decision["market"],
                 "decision": decision,
             }
@@ -1081,7 +1108,7 @@ def main():
             market_rows.append({
                 "symbol": sym,
                 "market": decision["market"],
-                "close": decision["entry"],
+                "close": safe_round(latest_close, 8),
                 "rsi7": decision.get("rsi7"),
                 "vwap_dev_pct": decision.get("vwap_dev_pct"),
                 "ema_dev_pct": decision.get("ema_dev_pct"),
@@ -1154,8 +1181,11 @@ def main():
     update_account_snapshot(account, positions, latest_market)
 
     # 5. 新开仓
-    open_count = sum(1 for p in positions.values() if p.get("status") == "OPEN")
-    slots_left = max(int(CONFIG["max_open_positions"]) - open_count, 0)
+    open_positions_count = sum(1 for p in positions.values() if p.get("status") == "OPEN")
+    open_long_count = sum(1 for p in positions.values() if p.get("status") == "OPEN" and p.get("side") == "LONG")
+    open_short_count = sum(1 for p in positions.values() if p.get("status") == "OPEN" and p.get("side") == "SHORT")
+
+    slots_left = max(int(CONFIG["max_open_positions"]) - open_positions_count, 0)
 
     if slots_left > 0:
         candidates = []
@@ -1177,13 +1207,22 @@ def main():
 
         candidates = sorted(candidates, key=lambda x: x["score"], reverse=True)
 
-        for signal in candidates[:slots_left]:
+        for signal in candidates:
+            if slots_left <= 0:
+                break
+
+            side = action_to_side(signal["action"])
+
+            if side == "LONG" and open_long_count >= CONFIG["max_same_direction_positions"]:
+                continue
+            if side == "SHORT" and open_short_count >= CONFIG["max_same_direction_positions"]:
+                continue
+
             sizing = compute_position_size(account, signal["entry"], signal["sl"])
             if sizing is None:
                 continue
 
             open_fee = apply_open_fee(account, sizing["notional"])
-            side = action_to_side(signal["action"])
 
             positions[signal["symbol"]] = {
                 "symbol": signal["symbol"],
@@ -1241,6 +1280,13 @@ def main():
                 "notional": sizing["notional"],
                 "leverage": sizing["leverage"],
             })
+
+            if side == "LONG":
+                open_long_count += 1
+            else:
+                open_short_count += 1
+
+            slots_left -= 1
 
     # 6. 再更新账户
     update_account_snapshot(account, positions, latest_market)

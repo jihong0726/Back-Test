@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-VERSION = "V12_PAPER_TRADING_ENGINE"
+VERSION = "V13_MARKET_SCAN_ENGINE"
 
 CONFIG = {
     "symbols": [
@@ -23,31 +23,27 @@ CONFIG = {
     "max_open_positions": 5,
     "min_signal_score": 68,
 
-    # 交易成本
     "fee_rate": 0.0006,
     "slippage_rate": 0.0002,
-
-    # 简化资金费模型：每次引擎运行按名义仓位收取微小费用
     "funding_rate_per_cycle": 0.00002,
 
-    # 风险参数
     "risk_mode": "standard",   # conservative / standard / aggressive
     "risk_per_trade": {
-        "conservative": 0.005,  # 0.5%
-        "standard": 0.01,       # 1%
-        "aggressive": 0.02      # 2%
+        "conservative": 0.005,
+        "standard": 0.01,
+        "aggressive": 0.02
     },
-    "max_margin_ratio": 0.25,   # 单笔最多使用净值 25% 作为保证金
+    "max_margin_ratio": 0.25,
     "default_leverage": 5,
 
-    # 止盈止损
     "atr_stop_mult": 1.0,
     "atr_tp_mult": 1.8,
     "partial_tp_ratio": 0.5,
     "move_sl_after_profit_atr": 1.0,
 
-    # 模拟账户
     "initial_balance": 10000.0,
+
+    "top_n_scan": 5
 }
 
 STATE_DIR = "state"
@@ -59,6 +55,7 @@ ACCOUNT_PATH = os.path.join(STATE_DIR, "paper_account.json")
 DECISION_LOG_PATH = os.path.join(REPORT_DIR, "decision_log.csv")
 SIGNALS_PATH = os.path.join(REPORT_DIR, "signals.csv")
 SUMMARY_PATH = os.path.join(REPORT_DIR, "latest_summary.txt")
+SCAN_PATH = os.path.join(REPORT_DIR, "market_scan.csv")
 
 
 # =========================================================
@@ -80,7 +77,6 @@ def local_now_str() -> str:
 
 def get_next_run_info():
     now = get_local_now()
-
     minute = now.minute
     next_minute = ((minute // 5) + 1) * 5
 
@@ -107,6 +103,10 @@ def side_symbol(side: str) -> str:
     if side in ("SHORT", "short"):
         return "🔴 空"
     return "⚪ 观望"
+
+
+def action_to_side(action: str) -> str:
+    return "LONG" if action == "long" else "SHORT"
 
 
 def safe_round(v, n=8):
@@ -161,9 +161,7 @@ def default_account():
 
 def load_account() -> dict:
     data = load_json_file(ACCOUNT_PATH, default_account())
-    if not isinstance(data, dict):
-        return default_account()
-    if not data:
+    if not isinstance(data, dict) or not data:
         return default_account()
     return data
 
@@ -176,7 +174,6 @@ def save_account(account: dict):
 def append_decision_logs(rows: list[dict]):
     if not rows:
         return
-
     df = pd.DataFrame(rows)
     if os.path.exists(DECISION_LOG_PATH):
         old = pd.read_csv(DECISION_LOG_PATH)
@@ -198,7 +195,7 @@ def send_telegram_message(text: str):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
         "chat_id": chat_id,
-        "text": text[:3800]
+        "text": text[:3900]
     }
 
     try:
@@ -209,11 +206,18 @@ def send_telegram_message(text: str):
         print(f"Failed to send Telegram message: {e}")
 
 
-def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: list[dict], open_positions: dict):
+def build_telegram_text(
+    account: dict,
+    new_signals: list[dict],
+    decision_rows: list[dict],
+    open_positions: dict,
+    long_scan: list[dict],
+    short_scan: list[dict]
+):
     run_info = get_next_run_info()
 
     lines = []
-    lines.append("📊 模拟交易引擎 V12")
+    lines.append("📊 模拟交易引擎 V13")
     lines.append(f"当前时间：{run_info['now']}")
     lines.append(f"下一次建议时间：{run_info['next_run']}")
     lines.append(f"距离下一次建议：约 {run_info['minutes_left']} 分 {run_info['seconds_left']} 秒")
@@ -235,10 +239,7 @@ def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: l
     lines.append("━━━━━━━━━━━━━━")
     lines.append("")
 
-    open_rows = []
-    for symbol, pos in open_positions.items():
-        if pos.get("status") == "OPEN":
-            open_rows.append(pos)
+    open_rows = [pos for _, pos in open_positions.items() if pos.get("status") == "OPEN"]
 
     if open_rows:
         for pos in open_rows[:10]:
@@ -259,11 +260,11 @@ def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: l
     close_rows = [x for x in decision_rows if x.get("type") == "POSITION" and x.get("action") == "CLOSE"]
     manage_rows = [x for x in decision_rows if x.get("type") == "POSITION" and x.get("action") in ("MOVE_SL", "PARTIAL_TP")]
 
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("🟢 本轮新开仓")
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("")
     if entry_rows:
-        lines.append("━━━━━━━━━━━━━━")
-        lines.append("🟢 本轮新开仓")
-        lines.append("━━━━━━━━━━━━━━")
-        lines.append("")
         for r in entry_rows[:5]:
             lines.append(f"{r['symbol']}")
             lines.append(f"方向：{side_symbol(r.get('side', ''))}")
@@ -282,12 +283,15 @@ def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: l
             if r.get("notional") is not None:
                 lines.append(f"名义仓位：{float(r['notional']):.2f}U")
             lines.append("")
-
-    if manage_rows:
-        lines.append("━━━━━━━━━━━━━━")
-        lines.append("⚙️ 本轮持仓调整")
-        lines.append("━━━━━━━━━━━━━━")
+    else:
+        lines.append("本轮没有新开仓")
         lines.append("")
+
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("⚙️ 本轮持仓调整")
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("")
+    if manage_rows:
         for r in manage_rows[:5]:
             pnl = r.get("pnl_pct", 0.0)
             action_map = {
@@ -299,12 +303,15 @@ def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: l
             lines.append(f"当前收益：{pnl:.2f}%")
             lines.append(f"原因：{r.get('reason', '')}")
             lines.append("")
-
-    if close_rows:
-        lines.append("━━━━━━━━━━━━━━")
-        lines.append("❌ 本轮已平仓")
-        lines.append("━━━━━━━━━━━━━━")
+    else:
+        lines.append("本轮没有持仓调整")
         lines.append("")
+
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("❌ 本轮已平仓")
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("")
+    if close_rows:
         for r in close_rows[:5]:
             pnl_pct = r.get("pnl_pct", 0.0)
             pnl_usd = r.get("pnl_usd", 0.0)
@@ -313,9 +320,43 @@ def build_telegram_text(account: dict, new_signals: list[dict], decision_rows: l
             lines.append(f"收益率：{pnl_pct:.2f}%")
             lines.append(f"盈亏：{pnl_usd:.2f}U")
             lines.append("")
+    else:
+        lines.append("本轮没有平仓")
+        lines.append("")
 
-    if not entry_rows and not manage_rows and not close_rows:
-        lines.append("本轮没有新的交易变化")
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("🚀 市场扫描 Top5 做多")
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("")
+    if long_scan:
+        for row in long_scan[:CONFIG["top_n_scan"]]:
+            lines.append(f"{row['symbol']}  {side_symbol('LONG')}")
+            lines.append(f"策略：{row['strategy']}")
+            lines.append(f"分数：{row['score']}")
+            lines.append(f"入场：{row['entry']}")
+            lines.append(f"止盈：{row['tp']}")
+            lines.append(f"止损：{row['sl']}")
+            lines.append("")
+    else:
+        lines.append("当前没有高质量做多机会")
+        lines.append("")
+
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("🚀 市场扫描 Top5 做空")
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("")
+    if short_scan:
+        for row in short_scan[:CONFIG["top_n_scan"]]:
+            lines.append(f"{row['symbol']}  {side_symbol('SHORT')}")
+            lines.append(f"策略：{row['strategy']}")
+            lines.append(f"分数：{row['score']}")
+            lines.append(f"入场：{row['entry']}")
+            lines.append(f"止盈：{row['tp']}")
+            lines.append(f"止损：{row['sl']}")
+            lines.append("")
+    else:
+        lines.append("当前没有高质量做空机会")
+        lines.append("")
 
     return "\n".join(lines)
 
@@ -455,7 +496,6 @@ def calc_vwap(df: pd.DataFrame) -> pd.Series:
 
 def add_strategy_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-
     df["ema20"] = df["close"].ewm(span=20, adjust=False).mean()
     df["ema50"] = df["close"].ewm(span=50, adjust=False).mean()
     df["rsi7"] = calc_rsi(df["close"], 7)
@@ -467,7 +507,6 @@ def add_strategy_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["ema_dev"] = (df["close"] - df["ema20"]) / df["ema20"]
     df["ema_spread"] = (df["ema20"] - df["ema50"]) / df["close"]
     df["atr_ratio"] = df["atr14"] / df["close"]
-
     return df
 
 
@@ -893,9 +932,54 @@ def update_position(symbol: str, pos: dict, df: pd.DataFrame, market: str, accou
 
 
 # =========================================================
+# 市场扫描
+# =========================================================
+def build_market_scan(latest_market: dict):
+    scan_rows = []
+
+    for sym, pack in latest_market.items():
+        signal = pack["decision"]
+        if signal["action"] == "neutral":
+            continue
+
+        scan_rows.append({
+            "symbol": sym,
+            "market": signal["market"],
+            "strategy": signal["strategy"],
+            "action": action_to_side(signal["action"]),
+            "score": signal["score"],
+            "entry": signal["entry"],
+            "tp": signal["tp"],
+            "sl": signal["sl"],
+            "reason": signal["reason"],
+            "rsi7": signal.get("rsi7"),
+            "vwap_dev_pct": signal.get("vwap_dev_pct"),
+            "ema_dev_pct": signal.get("ema_dev_pct"),
+        })
+
+    scan_df = pd.DataFrame(scan_rows)
+    if scan_df.empty:
+        return scan_df, [], []
+
+    scan_df = scan_df.sort_values(["score", "symbol"], ascending=[False, True]).reset_index(drop=True)
+
+    long_scan = scan_df[scan_df["action"] == "LONG"].head(CONFIG["top_n_scan"]).to_dict("records")
+    short_scan = scan_df[scan_df["action"] == "SHORT"].head(CONFIG["top_n_scan"]).to_dict("records")
+
+    return scan_df, long_scan, short_scan
+
+
+# =========================================================
 # 摘要
 # =========================================================
-def build_summary(account: dict, market_rows: list[dict], open_positions: dict, decision_rows: list[dict], new_signals: list[dict]):
+def build_summary(
+    account: dict,
+    market_rows: list[dict],
+    open_positions: dict,
+    decision_rows: list[dict],
+    new_signals: list[dict],
+    scan_df: pd.DataFrame
+):
     lines = []
     lines.append(f"Version: {VERSION}")
     lines.append(f"Generated At: {local_now_str()}")
@@ -947,6 +1031,13 @@ def build_summary(account: dict, market_rows: list[dict], open_positions: dict, 
         lines.append(pd.DataFrame(new_signals).to_string(index=False))
     else:
         lines.append("No new entry signals.")
+    lines.append("")
+
+    lines.append("=== MARKET SCAN ===")
+    if not scan_df.empty:
+        lines.append(scan_df.to_string(index=False))
+    else:
+        lines.append("No market scan signals.")
 
     return "\n".join(lines)
 
@@ -965,7 +1056,7 @@ def main():
     new_signals = []
     latest_market = {}
 
-    # 扫市场
+    # 1. 扫市场
     for sym in CONFIG["symbols"]:
         try:
             print("processing", sym)
@@ -1006,7 +1097,7 @@ def main():
                 "reason": str(e),
             })
 
-    # 收资金费
+    # 2. 资金费
     funding_paid = apply_funding(account, positions)
     if funding_paid > 0:
         decision_logs.append({
@@ -1017,7 +1108,7 @@ def main():
             "reason": f"本轮收取资金费 {funding_paid:.4f}U",
         })
 
-    # 更新持仓
+    # 3. 更新持仓
     for symbol, pos in list(positions.items()):
         if pos.get("status") != "OPEN":
             continue
@@ -1059,10 +1150,10 @@ def main():
             "sl": decision["sl"],
         })
 
-    # 账户快照
+    # 4. 账户快照
     update_account_snapshot(account, positions, latest_market)
 
-    # 新开仓
+    # 5. 新开仓
     open_count = sum(1 for p in positions.values() if p.get("status") == "OPEN")
     slots_left = max(int(CONFIG["max_open_positions"]) - open_count, 0)
 
@@ -1092,8 +1183,7 @@ def main():
                 continue
 
             open_fee = apply_open_fee(account, sizing["notional"])
-
-            side = "LONG" if signal["action"] == "long" else "SHORT"
+            side = action_to_side(signal["action"])
 
             positions[signal["symbol"]] = {
                 "symbol": signal["symbol"],
@@ -1152,10 +1242,14 @@ def main():
                 "leverage": sizing["leverage"],
             })
 
-    # 再更新账户
+    # 6. 再更新账户
     update_account_snapshot(account, positions, latest_market)
 
-    # 保存
+    # 7. 市场扫描
+    scan_df, long_scan, short_scan = build_market_scan(latest_market)
+    scan_df.to_csv(SCAN_PATH, index=False, encoding="utf-8-sig")
+
+    # 8. 保存
     save_positions(positions)
     save_account(account)
     append_decision_logs(decision_logs)
@@ -1167,13 +1261,21 @@ def main():
         market_rows=market_rows,
         open_positions=positions,
         decision_rows=decision_logs,
-        new_signals=new_signals
+        new_signals=new_signals,
+        scan_df=scan_df
     )
 
     with open(SUMMARY_PATH, "w", encoding="utf-8") as f:
         f.write(summary_text)
 
-    telegram_text = build_telegram_text(account, new_signals, decision_logs, positions)
+    telegram_text = build_telegram_text(
+        account=account,
+        new_signals=new_signals,
+        decision_rows=decision_logs,
+        open_positions=positions,
+        long_scan=long_scan,
+        short_scan=short_scan
+    )
     send_telegram_message(telegram_text)
 
     print(summary_text)
@@ -1181,6 +1283,7 @@ def main():
     print(f"saved: {POSITIONS_PATH}")
     print(f"saved: {ACCOUNT_PATH}")
     print(f"saved: {SIGNALS_PATH}")
+    print(f"saved: {SCAN_PATH}")
     print(f"saved: {DECISION_LOG_PATH}")
     print(f"saved: {SUMMARY_PATH}")
 

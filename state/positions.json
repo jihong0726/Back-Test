@@ -54,7 +54,7 @@
     "tp": 9.34947107,
     "sl": 9.55778088,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-03-12 18:23:07",
     "last_score": 94.1,
@@ -62,7 +62,11 @@
     "notional": 3584.3908,
     "leverage": 3.0,
     "risk_amount": 49.7832,
-    "stop_distance_pct": 0.3204
+    "stop_distance_pct": 0.3204,
+    "closed_at": "2026-03-12 23:36:28",
+    "exit_price": 9.583,
+    "exit_reason": "PROTECTIVE_EXIT",
+    "realized_pnl": 6.4591
   },
   "NEARUSDT": {
     "symbol": "NEARUSDT",
@@ -117,7 +121,7 @@
     "market": "RANGE",
     "entry": 0.8575,
     "tp": 0.91064264,
-    "sl": 0.85305,
+    "sl": 0.85966601,
     "size": 1.0,
     "status": "OPEN",
     "partial_taken": false,
@@ -159,7 +163,7 @@
     "market": "RANGE",
     "entry": 0.263,
     "tp": 0.25778875,
-    "sl": 0.26146691,
+    "sl": 0.26083149,
     "size": 0.5,
     "status": "OPEN",
     "partial_taken": true,
@@ -170,5 +174,24 @@
     "leverage": 3.0,
     "risk_amount": 49.5948,
     "stop_distance_pct": 0.2987
+  },
+  "ETHUSDT": {
+    "symbol": "ETHUSDT",
+    "side": "SHORT",
+    "strategy": "VWAP_2.5",
+    "market": "RANGE",
+    "entry": 2066.48,
+    "tp": 2014.01190725,
+    "sl": 2075.92285714,
+    "size": 1.0,
+    "status": "OPEN",
+    "partial_taken": false,
+    "opened_at": "2026-03-12 23:36:28",
+    "last_score": 94.46,
+    "margin": 1184.3163,
+    "notional": 3552.9488,
+    "leverage": 3.0,
+    "risk_amount": 49.3465,
+    "stop_distance_pct": 0.457
   }
 }

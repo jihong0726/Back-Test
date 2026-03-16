@@ -8,7 +8,7 @@
     "tp": 3.02243705,
     "sl": 3.0985786,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-03-16 06:50:00",
     "last_score": 99.04,
@@ -16,7 +16,11 @@
     "notional": 3344.2942,
     "leverage": 3.0,
     "risk_amount": 46.4485,
-    "stop_distance_pct": 0.2939
+    "stop_distance_pct": 0.2939,
+    "closed_at": "2026-03-16 13:09:32",
+    "exit_price": 3.169,
+    "exit_reason": "STOP_LOSS",
+    "realized_pnl": -65.0249
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
@@ -342,26 +346,22 @@
   },
   "LINKUSDT": {
     "symbol": "LINKUSDT",
-    "side": "SHORT",
-    "strategy": "VWAP_2.0",
-    "market": "RANGE",
-    "entry": 9.315,
-    "tp": 9.12027868,
-    "sl": 9.26719626,
-    "size": 0.5,
-    "status": "CLOSED",
-    "partial_taken": true,
-    "opened_at": "2026-03-16 05:37:55",
-    "last_score": 100,
-    "margin": 1125.7168,
-    "notional": 3377.1505,
+    "side": "LONG",
+    "strategy": "TrendPullback_Long",
+    "market": "TREND_UP",
+    "entry": 9.685,
+    "tp": 9.75814286,
+    "sl": 9.63928571,
+    "size": 1.0,
+    "status": "OPEN",
+    "partial_taken": false,
+    "opened_at": "2026-03-16 13:09:32",
+    "last_score": 89.66,
+    "margin": 1122.4525,
+    "notional": 3367.3574,
     "leverage": 3.0,
-    "risk_amount": 46.9049,
-    "stop_distance_pct": 0.2991,
-    "closed_at": "2026-03-16 06:50:00",
-    "exit_price": 9.438,
-    "exit_reason": "STOP_LOSS",
-    "realized_pnl": -47.2953
+    "risk_amount": 46.7689,
+    "stop_distance_pct": 0.472
   },
   "DOTUSDT": {
     "symbol": "DOTUSDT",
@@ -372,7 +372,7 @@
     "tp": 1.47943918,
     "sl": 1.43806535,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-03-16 06:18:25",
     "last_score": 93.62,
@@ -380,7 +380,11 @@
     "notional": 3376.4701,
     "leverage": 3.0,
     "risk_amount": 46.8954,
-    "stop_distance_pct": 0.3068
+    "stop_distance_pct": 0.3068,
+    "closed_at": "2026-03-16 13:09:32",
+    "exit_price": 1.522,
+    "exit_reason": "TAKE_PROFIT",
+    "realized_pnl": 239.834
   },
   "OPUSDT": {
     "symbol": "OPUSDT",
@@ -391,7 +395,7 @@
     "tp": 0.12279274,
     "sl": 0.1285,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-03-16 08:00:50",
     "last_score": 98.21,
@@ -399,6 +403,10 @@
     "notional": 3339.2642,
     "leverage": 3.0,
     "risk_amount": 46.3787,
-    "stop_distance_pct": 0.3168
+    "stop_distance_pct": 0.3168,
+    "closed_at": "2026-03-16 13:09:32",
+    "exit_price": 0.1296,
+    "exit_reason": "STOP_LOSS",
+    "realized_pnl": -31.2566
   }
 }

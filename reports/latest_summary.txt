@@ -1,47 +1,43 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-03-18 18:12:46
+Generated At: 2026-03-18 19:09:54
 
 === ACCOUNT ===
- initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0    8995.57765 8995.5776    1079.7803    7915.7973   -565.751897             0.0     31.107377   812.53468 2026-03-18 18:12:46
+ initial_balance  cash_balance   equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
+         10000.0   8995.512863 9037.799    1079.7803    7958.0187   -565.751897         42.2861     31.172164   812.53468 2026-03-18 19:09:54
 
 === MARKET STATES ===
   symbol   market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT    RANGE 74199.30000 51.0523        1.7132       0.1358   0.00
- ETHUSDT    RANGE  2329.10000 45.8244        4.5322       0.1377   0.00
- SOLUSDT    RANGE    94.31200 54.2453        2.5844       0.1446   0.00
- XRPUSDT    RANGE     1.52070 32.5203        2.7230      -0.0934   0.00
-DOGEUSDT    RANGE     0.09974 35.8209        0.8895      -0.0218   0.00
- BNBUSDT    RANGE   675.56000 69.6203        1.0623       0.1510   0.00
- ADAUSDT    RANGE     0.29110 68.1818        4.3897       0.3766  90.07
-AVAXUSDT    RANGE    10.25000 37.0370        2.0120      -0.0129   0.00
-LINKUSDT    RANGE     9.82100 33.3333        3.2985      -0.0215   0.00
- LTCUSDT    RANGE    57.82000 45.8333        1.4147       0.1006   0.00
- APTUSDT    RANGE     1.01080 37.8378        5.8423       0.1748   0.00
- SUIUSDT    RANGE     1.02880 39.2523       -0.0458       0.0087   0.00
- ARBUSDT    RANGE     0.10770 14.2857        2.1171      -0.1593   0.00
-  OPUSDT    RANGE     0.13570 44.4444        5.1136       0.1742   0.00
-ATOMUSDT TREND_UP     2.01490 57.4879        5.8114       0.3883   0.00
-NEARUSDT    RANGE     1.45310 39.0728        4.7923       0.2624   0.00
- DOTUSDT    RANGE     1.63600 58.3333        6.1950       0.3045   0.00
- FILUSDT    RANGE     0.97610 42.0118        5.9643      -0.2268   0.00
- INJUSDT    RANGE     3.22400 25.0000        2.0800      -0.0755   0.00
+ BTCUSDT    RANGE 73864.20000 31.0577        1.2370      -0.1649    0.0
+ ETHUSDT    RANGE  2309.36000 20.7951        3.5814      -0.4046    0.0
+ SOLUSDT    RANGE    93.67200 28.7102        1.8545      -0.2872    0.0
+ XRPUSDT    RANGE     1.50740 19.7279        1.7563      -0.4956    0.0
+DOGEUSDT    RANGE     0.09894 17.8571        0.0657      -0.4397    0.0
+ BNBUSDT    RANGE   671.04000 16.5703        0.3787      -0.3158    0.0
+ ADAUSDT    RANGE     0.28730 20.8333        2.9711      -0.5880    0.0
+AVAXUSDT    RANGE    10.20700 30.5085        1.5679      -0.1976    0.0
+LINKUSDT    RANGE     9.74600 20.6186        2.4721      -0.3910    0.0
+ LTCUSDT    RANGE    57.53000 25.0000        0.8915      -0.2467    0.0
+ APTUSDT    RANGE     1.00710 32.8244        5.4047      -0.2366    0.0
+ SUIUSDT    RANGE     1.02410 42.4837       -0.4923      -0.1534    0.0
+ ARBUSDT    RANGE     0.10740 46.6667        1.8188      -0.1290    0.0
+  OPUSDT    RANGE     0.13530 46.6667        4.7732      -0.0319    0.0
+ATOMUSDT TREND_UP     2.01840 43.2886        5.9210       0.1106    0.0
+NEARUSDT    RANGE     1.45350 46.7456        4.7787       0.0469    0.0
+ DOTUSDT    RANGE     1.63200 41.6667        5.9164       0.0040    0.0
+ FILUSDT    RANGE     0.97310 50.0000        5.5944      -0.1287    0.0
+ INJUSDT    RANGE     3.20100 27.7778        1.3397      -0.3937    0.0
 
 === OPEN POSITIONS ===
- symbol  side strategy  entry       tp       sl    margin  notional  leverage  size           opened_at
-ADAUSDT SHORT VWAP_2.5 0.2911 0.278859 0.291664 1079.7803 3239.3409       3.0   1.0 2026-03-18 18:12:46
+ symbol  side strategy  entry       tp     sl    margin  notional  leverage  size           opened_at
+ADAUSDT SHORT VWAP_2.5 0.2911 0.278859 0.2911 1079.7803 3239.3409       3.0   0.5 2026-03-18 18:12:46
 
 === POSITION DECISIONS ===
-               time  symbol     type  action                          reason  current_price  pnl_pct  pnl_usd market strategy  side  entry       tp       sl    margin  notional  leverage
-2026-03-18 18:12:46 ACCOUNT  ACCOUNT FUNDING                 本轮收取资金费 0.1303U            NaN      NaN      NaN    NaN      NaN   NaN    NaN      NaN      NaN       NaN       NaN       NaN
-2026-03-18 18:12:46 ADAUSDT POSITION   CLOSE                            触发止损         0.2911  -0.5153 -19.4906  RANGE VWAP_2.5 SHORT 0.2896 0.278731 0.290186       NaN       NaN       NaN
-2026-03-18 18:12:46 DOTUSDT POSITION   CLOSE                            触发止损         1.6360  -0.3667 -14.5821  RANGE VWAP_2.5 SHORT 1.6300 1.539998 1.633143       NaN       NaN       NaN
-2026-03-18 18:12:46 ADAUSDT    ENTRY    OPEN 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归         0.2911   0.0000   0.0000  RANGE VWAP_2.5 SHORT 0.2911 0.278859 0.291664 1079.7803 3239.3409       3.0
+               time  symbol     type     action                reason  current_price  pnl_pct  pnl_usd market strategy  side  entry       tp       sl
+2026-03-18 19:09:54 ACCOUNT  ACCOUNT    FUNDING       本轮收取资金费 0.0648U            NaN      NaN      NaN    NaN      NaN   NaN    NaN      NaN      NaN
+2026-03-18 19:09:54 ADAUSDT POSITION PARTIAL_TP 达到第一目标，部分止盈并下移止损到入场附近         0.2873   1.3227  42.2861  RANGE VWAP_2.5 SHORT 0.2911 0.278859 0.291664
 
 === NEW ENTRY SIGNALS ===
- symbol market strategy action  entry       tp       sl  score                          reason    margin  notional  leverage  risk_amount  open_fee
-ADAUSDT  RANGE VWAP_2.5  SHORT 0.2911 0.278859 0.291664  90.07 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 1079.7803 3239.3409       3.0      44.9908    2.5915
+No new entry signals.
 
 === MARKET SCAN ===
- symbol market strategy action  score  entry       tp       sl                          reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
-ADAUSDT  RANGE VWAP_2.5  SHORT  90.07 0.2911 0.278859 0.291664 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 68.1818        4.3897       0.3766         0.1938
+No market scan signals.

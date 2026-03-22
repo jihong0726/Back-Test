@@ -119,23 +119,19 @@
     "side": "LONG",
     "strategy": "VWAP_2.5",
     "market": "RANGE",
-    "entry": 0.8744,
-    "tp": 0.92157339,
-    "sl": 0.87806678,
-    "size": 0.5,
-    "status": "CLOSED",
-    "partial_taken": true,
-    "opened_at": "2026-03-22 16:18:45",
-    "last_score": 99.7,
-    "margin": 1024.1349,
-    "notional": 3072.4048,
+    "entry": 0.8725,
+    "tp": 0.91700814,
+    "sl": 0.87063571,
+    "size": 1.0,
+    "status": "OPEN",
+    "partial_taken": false,
+    "opened_at": "2026-03-22 22:54:29",
+    "last_score": 93.94,
+    "margin": 1021.8428,
+    "notional": 3065.5283,
     "leverage": 3.0,
-    "risk_amount": 42.6723,
-    "stop_distance_pct": 0.2312,
-    "closed_at": "2026-03-22 18:38:17",
-    "exit_price": 0.8757,
-    "exit_reason": "PROTECTIVE_EXIT",
-    "realized_pnl": 2.1099
+    "risk_amount": 42.5768,
+    "stop_distance_pct": 0.2137
   },
   "APTUSDT": {
     "symbol": "APTUSDT",
@@ -146,7 +142,7 @@
     "tp": 0.93265714,
     "sl": 0.9366,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-03-22 21:59:24",
     "last_score": 93.79,
@@ -154,7 +150,11 @@
     "notional": 3064.0915,
     "leverage": 3.0,
     "risk_amount": 42.5568,
-    "stop_distance_pct": 0.2631
+    "stop_distance_pct": 0.2631,
+    "closed_at": "2026-03-22 22:54:29",
+    "exit_price": 0.93,
+    "exit_reason": "TAKE_PROFIT",
+    "realized_pnl": 19.1407
   },
   "ADAUSDT": {
     "symbol": "ADAUSDT",
@@ -280,7 +280,7 @@
     "tp": 71123.00567302,
     "sl": 68694.43782021,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-03-22 19:42:25",
     "last_score": 98.07,
@@ -288,7 +288,11 @@
     "notional": 3052.9185,
     "leverage": 3.0,
     "risk_amount": 42.4016,
-    "stop_distance_pct": 0.1508
+    "stop_distance_pct": 0.1508,
+    "closed_at": "2026-03-22 22:54:29",
+    "exit_price": 68654.8,
+    "exit_reason": "PROTECTIVE_EXIT",
+    "realized_pnl": 13.1472
   },
   "LTCUSDT": {
     "symbol": "LTCUSDT",
@@ -414,7 +418,7 @@
     "tp": 1.46557142,
     "sl": 1.39850433,
     "size": 1.0,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": false,
     "opened_at": "2026-03-22 21:59:24",
     "last_score": 92.06,
@@ -422,6 +426,10 @@
     "notional": 3064.0915,
     "leverage": 3.0,
     "risk_amount": 42.5568,
-    "stop_distance_pct": 0.1686
+    "stop_distance_pct": 0.1686,
+    "closed_at": "2026-03-22 22:54:29",
+    "exit_price": 1.3964,
+    "exit_reason": "STOP_LOSS",
+    "realized_pnl": -5.7392
   }
 }

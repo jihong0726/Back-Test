@@ -139,26 +139,22 @@
   },
   "APTUSDT": {
     "symbol": "APTUSDT",
-    "side": "SHORT",
-    "strategy": "VWAP_2.5",
-    "market": "RANGE",
-    "entry": 1.0493,
-    "tp": 0.98990955,
-    "sl": 1.05344286,
+    "side": "LONG",
+    "strategy": "TrendPullback_Long",
+    "market": "TREND_UP",
+    "entry": 1.0793,
+    "tp": 1.09331143,
+    "sl": 1.07054286,
     "size": 1.0,
-    "status": "CLOSED",
+    "status": "OPEN",
     "partial_taken": false,
-    "opened_at": "2026-03-25 03:19:53",
-    "last_score": 91.54,
-    "margin": 1015.9566,
-    "notional": 3047.8697,
+    "opened_at": "2026-03-25 08:58:06",
+    "last_score": 92.39,
+    "margin": 1023.9993,
+    "notional": 3071.998,
     "leverage": 3.0,
-    "risk_amount": 42.3315,
-    "stop_distance_pct": 0.3948,
-    "closed_at": "2026-03-25 03:58:54",
-    "exit_price": 1.0562,
-    "exit_reason": "STOP_LOSS",
-    "realized_pnl": -22.4805
+    "risk_amount": 42.6666,
+    "stop_distance_pct": 0.8114
   },
   "ADAUSDT": {
     "symbol": "ADAUSDT",
@@ -395,7 +391,7 @@
     "tp": 0.11647108,
     "sl": 0.1135721,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-03-25 03:58:54",
     "last_score": 92.49,
@@ -403,7 +399,11 @@
     "notional": 3038.877,
     "leverage": 3.0,
     "risk_amount": 42.2066,
-    "stop_distance_pct": 0.2178
+    "stop_distance_pct": 0.2178,
+    "closed_at": "2026-03-25 08:58:06",
+    "exit_price": 0.1135,
+    "exit_reason": "PROTECTIVE_EXIT",
+    "realized_pnl": 52.0779
   },
   "XRPUSDT": {
     "symbol": "XRPUSDT",
@@ -414,7 +414,7 @@
     "tp": 1.41884702,
     "sl": 1.41255539,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-03-25 03:58:54",
     "last_score": 96.71,
@@ -422,6 +422,10 @@
     "notional": 3038.877,
     "leverage": 3.0,
     "risk_amount": 42.2066,
-    "stop_distance_pct": 0.1235
+    "stop_distance_pct": 0.1235,
+    "closed_at": "2026-03-25 08:58:06",
+    "exit_price": 1.4205,
+    "exit_reason": "TAKE_PROFIT",
+    "realized_pnl": 68.5001
   }
 }

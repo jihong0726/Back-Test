@@ -1,49 +1,45 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-04-04 19:48:11
+Generated At: 2026-04-04 20:02:44
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   7732.583401 7736.5566     1858.375    5878.1816   -956.150632          3.9732     95.098226 2427.875381 2026-04-04 19:48:11
+         10000.0   7732.471899 7742.1207     1858.375    5883.7457   -956.150632          9.6488     95.209728 2427.875381 2026-04-04 20:02:44
 
 === MARKET STATES ===
   symbol market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT  RANGE 67100.00000 43.5747       -0.3820       0.0796   0.00
- ETHUSDT  RANGE  2050.80000 25.0909       -1.2923      -0.0182   0.00
- SOLUSDT  RANGE    80.17300 56.3758       -1.6884       0.0566   0.00
- XRPUSDT  RANGE     1.31090  7.8431       -1.1201      -0.1004   0.00
-DOGEUSDT  RANGE     0.09117 75.0000       -0.2976       0.1606   0.00
- BNBUSDT  RANGE   589.20000 23.5772       -2.0757      -0.0421  92.23
- ADAUSDT  RANGE     0.24470 38.4615        0.1784       0.1185   0.00
-AVAXUSDT  RANGE     8.88800 41.1765       -0.5570       0.0977   0.00
-LINKUSDT  RANGE     8.65900 41.3793       -0.9780       0.0666   0.00
- LTCUSDT  RANGE    53.29000 33.3333        0.0220       0.0905   0.00
- APTUSDT  RANGE     0.84360 40.7407       -4.4332       0.0627   0.00
- SUIUSDT  RANGE     0.86950 50.0000       -0.4645       0.1545   0.00
- ARBUSDT  RANGE     0.09170 50.0000       -0.8474       0.0192   0.00
-  OPUSDT  RANGE     0.10970 60.0000        0.7559       0.2146   0.00
-ATOMUSDT  RANGE     1.69890 76.5957        0.9669       0.1531   0.00
-NEARUSDT  RANGE     1.23410 46.8750        3.8337       0.2114   0.00
- DOTUSDT  RANGE     1.25100 50.0000       -0.0086       0.4742   0.00
- FILUSDT  RANGE     0.84080 87.0968        1.2303       0.4884   0.00
- INJUSDT  RANGE     2.81400 50.0000       -1.0335       0.4012   0.00
+ BTCUSDT  RANGE 67128.50000 63.6517       -0.3396       0.0999    0.0
+ ETHUSDT  RANGE  2052.50000 67.2131       -1.2127       0.0599    0.0
+ SOLUSDT  RANGE    80.17300 57.2581       -1.6849       0.0448    0.0
+ XRPUSDT  RANGE     1.31120 33.3333       -1.0958      -0.0568    0.0
+DOGEUSDT  RANGE     0.09109 60.0000       -0.3833       0.0536    0.0
+ BNBUSDT  RANGE   589.42000 67.8571       -2.0336       0.0065    0.0
+ ADAUSDT  RANGE     0.24460 54.5455        0.1390       0.0441    0.0
+AVAXUSDT  RANGE     8.88000 44.0000       -0.6480      -0.0044    0.0
+LINKUSDT  RANGE     8.65800 59.2593       -0.9909       0.0439    0.0
+ LTCUSDT  RANGE    53.36000 78.5714        0.1538       0.1765    0.0
+ APTUSDT  RANGE     0.84500 83.3333       -4.2718       0.1765    0.0
+ SUIUSDT  RANGE     0.87130 94.7368       -0.2580       0.2761    0.0
+ ARBUSDT  RANGE     0.09210 83.3333       -0.4153       0.3394    0.0
+  OPUSDT  RANGE     0.10970 71.4286        0.7536       0.1517    0.0
+ATOMUSDT  RANGE     1.70220 83.3333        1.1573       0.2823    0.0
+NEARUSDT  RANGE     1.23170 50.9091        3.6241       0.0067    0.0
+ DOTUSDT  RANGE     1.25400 90.0000        0.2380       0.5110    0.0
+ FILUSDT  RANGE     0.83950 75.3086        1.0746       0.2264    0.0
+ INJUSDT  RANGE     2.80800 61.5385       -1.2406       0.1168    0.0
 
 === OPEN POSITIONS ===
  symbol side strategy    entry         tp         sl   margin  notional  leverage  size           opened_at
 BNBUSDT LONG VWAP_2.0 589.2000 601.689499 588.844286 928.6542 2785.9627       3.0   1.0 2026-04-04 19:48:11
-APTUSDT LONG VWAP_2.5   0.8424   0.882814   0.842400 929.7208 2789.1625       3.0   0.5 2026-04-04 19:22:08
+APTUSDT LONG VWAP_2.5   0.8424   0.882814   0.843511 929.7208 2789.1625       3.0   0.5 2026-04-04 19:22:08
 
 === POSITION DECISIONS ===
-               time   symbol     type     action                       reason  current_price  pnl_pct  pnl_usd market strategy  side    entry         tp         sl   margin  notional  leverage
-2026-04-04 19:48:11  ACCOUNT  ACCOUNT    FUNDING              本轮收取资金费 0.1675U            NaN      NaN      NaN    NaN      NaN   NaN      NaN        NaN        NaN      NaN       NaN       NaN
-2026-04-04 19:48:11 NEARUSDT POSITION      CLOSE                         触发止损         1.2341  -0.2107  -8.1355  RANGE VWAP_2.5 SHORT   1.2315   1.188417   1.233936      NaN       NaN       NaN
-2026-04-04 19:48:11  BNBUSDT POSITION      CLOSE                         触发止损       589.2000  -0.0780  -4.4072  RANGE VWAP_2.0  LONG 589.6600 601.732326 589.276429      NaN       NaN       NaN
-2026-04-04 19:48:11  APTUSDT POSITION PARTIAL_TP        达到第一目标，部分止盈并上移止损到入场附近         0.8436   0.1425   3.9732  RANGE VWAP_2.5  LONG   0.8424   0.882814   0.841329      NaN       NaN       NaN
-2026-04-04 19:48:11  BNBUSDT    ENTRY       OPEN 震荡市场中价格低于 VWAP 2%，偏离足够，做多等回归       589.2000   0.0000   0.0000  RANGE VWAP_2.0  LONG 589.2000 601.689499 588.844286 928.6542 2785.9627       3.0
+               time  symbol     type  action          reason  current_price  pnl_pct  pnl_usd market strategy side    entry         tp         sl
+2026-04-04 20:02:44 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.1115U            NaN      NaN      NaN    NaN      NaN  NaN      NaN        NaN        NaN
+2026-04-04 20:02:44 BNBUSDT POSITION    HOLD      结构未失效，继续持有        589.420   0.0373   1.0402  RANGE VWAP_2.0 LONG 589.2000 601.689499 588.844286
+2026-04-04 20:02:44 APTUSDT POSITION MOVE_SL       盈利扩大，上移止损          0.845   0.3086   8.6085  RANGE VWAP_2.5 LONG   0.8424   0.882814   0.842400
 
 === NEW ENTRY SIGNALS ===
- symbol market strategy action  entry         tp         sl  score                       reason   margin  notional  leverage  risk_amount  open_fee
-BNBUSDT  RANGE VWAP_2.0   LONG  589.2 601.689499 588.844286  92.23 震荡市场中价格低于 VWAP 2%，偏离足够，做多等回归 928.6542 2785.9627       3.0      38.6939    2.2288
+No new entry signals.
 
 === MARKET SCAN ===
- symbol market strategy action  score  entry         tp         sl                       reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
-BNBUSDT  RANGE VWAP_2.0   LONG  92.23  589.2 601.689499 588.844286 震荡市场中价格低于 VWAP 2%，偏离足够，做多等回归 23.5772       -2.0757      -0.0421         0.0604
+No market scan signals.

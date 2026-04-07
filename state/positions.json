@@ -54,7 +54,7 @@
     "tp": 8.50757143,
     "sl": 8.59114286,
     "size": 1.0,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": false,
     "opened_at": "2026-04-07 14:53:25",
     "last_score": 88.0,
@@ -62,7 +62,11 @@
     "notional": 2824.2034,
     "leverage": 3.0,
     "risk_amount": 39.225,
-    "stop_distance_pct": 0.3755
+    "stop_distance_pct": 0.3755,
+    "closed_at": "2026-04-07 16:02:31",
+    "exit_price": 8.674,
+    "exit_reason": "STOP_LOSS",
+    "realized_pnl": -40.2058
   },
   "NEARUSDT": {
     "symbol": "NEARUSDT",
@@ -73,7 +77,7 @@
     "tp": 1.22184633,
     "sl": 1.23046662,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-04-07 04:52:59",
     "last_score": 97.09,
@@ -81,7 +85,11 @@
     "notional": 2766.7349,
     "leverage": 3.0,
     "risk_amount": 38.4269,
-    "stop_distance_pct": 0.145
+    "stop_distance_pct": 0.145,
+    "closed_at": "2026-04-07 16:02:31",
+    "exit_price": 1.2399,
+    "exit_reason": "PROTECTIVE_EXIT",
+    "realized_pnl": 75.8511
   },
   "BNBUSDT": {
     "symbol": "BNBUSDT",
@@ -136,10 +144,10 @@
     "market": "RANGE",
     "entry": 0.8315,
     "tp": 0.85208366,
-    "sl": 0.83,
-    "size": 1.0,
+    "sl": 0.8315,
+    "size": 0.5,
     "status": "OPEN",
-    "partial_taken": false,
+    "partial_taken": true,
     "opened_at": "2026-04-07 13:30:59",
     "last_score": 93.07,
     "margin": 942.6719,

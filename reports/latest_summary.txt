@@ -1,45 +1,46 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-04-12 02:37:36
+Generated At: 2026-04-12 03:22:36
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   7584.790449 7643.9364     937.2359    6706.7005   -818.999091          59.146    115.462954 2959.245646 2026-04-12 02:37:36
+         10000.0   7645.115489 7645.1155     917.6781    6727.4374   -756.415389             0.0    115.519188  2963.69744 2026-04-12 03:22:36
 
 === MARKET STATES ===
   symbol   market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT    RANGE 73573.90000 50.0000        3.5212       0.6265    0.0
- ETHUSDT TREND_UP  2298.84000 99.5099        5.1053       1.5667    0.0
- SOLUSDT    RANGE    85.55200 50.0000        3.2370       0.7745    0.0
- XRPUSDT    RANGE     1.36500 97.9592        1.6032       0.8248    0.0
-DOGEUSDT    RANGE     0.09384 96.6102        1.2045       0.7088    0.0
- BNBUSDT    RANGE   610.57000 94.7631        0.8918       0.4746    0.0
- ADAUSDT    RANGE     0.25240 97.6190       -0.0222       1.1262    0.0
-AVAXUSDT TREND_UP     9.48100 95.0820        3.8988       0.8506    0.0
-LINKUSDT TREND_UP     9.21200 50.0000        3.0188       1.2657    0.0
- LTCUSDT TREND_UP    55.44000 50.0000        1.8857       0.8019    0.0
- APTUSDT TREND_UP     0.87520 87.5862        3.6391       0.9310    0.0
- SUIUSDT TREND_UP     0.95560 94.0789        3.9374       1.0682    0.0
- ARBUSDT TREND_UP     0.11680 73.3333        9.7287       0.3539    0.0
-  OPUSDT TREND_UP     0.11490 50.0000        0.7617       1.2032    0.0
-ATOMUSDT    RANGE     1.78110 98.4375       -0.0324       0.4413    0.0
-NEARUSDT TREND_UP     1.41840 76.2500        6.7722       1.0601    0.0
- DOTUSDT    RANGE     1.29900 94.7368        1.3707       0.9202    0.0
- FILUSDT TREND_UP     0.91700 93.2886        3.3983       1.0553    0.0
- INJUSDT    RANGE     3.05300 50.0000        4.1863       0.8869    0.0
+ BTCUSDT    RANGE 73442.70000 42.9905        3.2747       0.1279   0.00
+ ETHUSDT TREND_UP  2309.31000 58.6173        5.4653       0.8340   0.00
+ SOLUSDT TREND_UP    85.49100 48.8462        3.1380       0.2604   0.00
+ XRPUSDT TREND_UP     1.36500 48.6239        1.5887       0.3219   0.00
+DOGEUSDT TREND_UP     0.09411 53.9474        1.4844       0.4134   0.00
+ BNBUSDT    RANGE   611.50000 66.9516        1.0406       0.2555   0.00
+ ADAUSDT TREND_UP     0.25290 63.1579        0.1833       0.5575   0.00
+AVAXUSDT TREND_UP     9.50500 51.1628        4.1516       0.4553   0.00
+LINKUSDT TREND_UP     9.20400 53.1915        2.9062       0.4674   0.00
+ LTCUSDT TREND_UP    55.41000 35.4839        1.8144       0.2546   0.00
+ APTUSDT TREND_UP     0.87480 46.2264        3.5916       0.3812   0.00
+ SUIUSDT TREND_UP     0.95440 48.5149        3.7704       0.3747   0.00
+ ARBUSDT TREND_UP     0.11730 66.6667       10.1166       0.5341   0.00
+  OPUSDT TREND_UP     0.11500 37.5000        0.8380       0.6041   0.00
+ATOMUSDT    RANGE     1.77940 36.3636       -0.1508       0.1004   0.00
+NEARUSDT TREND_UP     1.40530 34.7619        5.7171      -0.0162  84.09
+ DOTUSDT TREND_UP     1.30500 63.6364        1.8354       0.6508   0.00
+ FILUSDT TREND_UP     0.91660 29.1139        3.3301       0.3990   0.00
+ INJUSDT TREND_UP     3.06700 61.2903        4.6277       0.6632   0.00
 
 === OPEN POSITIONS ===
- symbol side strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
-ADAUSDT LONG VWAP_2.0 0.2472 0.252691 0.249589 937.2359 2811.7078       3.0   0.5 2026-04-11 22:48:07
+  symbol side           strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
+NEARUSDT LONG TrendPullback_Long 1.4053 1.414146 1.399771 917.6781 2753.0344       3.0   1.0 2026-04-12 03:22:36
 
 === POSITION DECISIONS ===
-               time  symbol     type  action          reason  current_price  pnl_pct  pnl_usd   market strategy  side     entry          tp          sl
-2026-04-12 02:37:36 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.1672U            NaN      NaN      NaN      NaN      NaN   NaN       NaN         NaN         NaN
-2026-04-12 02:37:36 INJUSDT POSITION   CLOSE            触发止损         3.0530  -1.0154 -30.6736    RANGE VWAP_2.5 SHORT    3.0220    2.929946    3.027143
-2026-04-12 02:37:36 ADAUSDT POSITION MOVE_SL       盈利扩大，上移止损         0.2524   2.1036  59.1460    RANGE VWAP_2.0  LONG    0.2472    0.252691    0.249140
-2026-04-12 02:37:36 ETHUSDT POSITION   CLOSE            触发止损      2298.8400  -1.7152 -50.6269 TREND_UP VWAP_2.5 SHORT 2259.4100 2184.408377 2264.008571
+               time   symbol     type  action                    reason  current_price  pnl_pct  pnl_usd   market           strategy side  entry       tp       sl   margin  notional  leverage
+2026-04-12 03:22:36  ACCOUNT  ACCOUNT FUNDING           本轮收取资金费 0.0562U            NaN      NaN      NaN      NaN                NaN  NaN    NaN      NaN      NaN      NaN       NaN       NaN
+2026-04-12 03:22:36  ADAUSDT POSITION   CLOSE                      触发止盈         0.2529   2.3058  62.5837 TREND_UP           VWAP_2.0 LONG 0.2472 0.252691 0.249589      NaN       NaN       NaN
+2026-04-12 03:22:36 NEARUSDT    ENTRY    OPEN 上升趋势中回踩 EMA20，RSI 偏低，顺势做多         1.4053   0.0000   0.0000 TREND_UP TrendPullback_Long LONG 1.4053 1.414146 1.399771 917.6781 2753.0344       3.0
 
 === NEW ENTRY SIGNALS ===
-No new entry signals.
+  symbol   market           strategy action  entry       tp       sl  score                    reason   margin  notional  leverage  risk_amount  open_fee
+NEARUSDT TREND_UP TrendPullback_Long   LONG 1.4053 1.414146 1.399771  84.09 上升趋势中回踩 EMA20，RSI 偏低，顺势做多 917.6781 2753.0344       3.0      38.2366    2.2024
 
 === MARKET SCAN ===
-No market scan signals.
+  symbol   market           strategy action  score  entry       tp       sl                    reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
+NEARUSDT TREND_UP TrendPullback_Long   LONG  84.09 1.4053 1.414146 1.399771 上升趋势中回踩 EMA20，RSI 偏低，顺势做多 34.7619        5.7171      -0.0162         0.3934

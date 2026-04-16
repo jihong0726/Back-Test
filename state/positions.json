@@ -1,26 +1,22 @@
 {
   "INJUSDT": {
     "symbol": "INJUSDT",
-    "side": "LONG",
-    "strategy": "TrendPullback_Long",
-    "market": "TREND_UP",
-    "entry": 3.273,
-    "tp": 3.32202857,
-    "sl": 3.24235714,
+    "side": "SHORT",
+    "strategy": "VWAP_2.5",
+    "market": "RANGE",
+    "entry": 3.368,
+    "tp": 3.1268362,
+    "sl": 3.38157143,
     "size": 1.0,
-    "status": "CLOSED",
+    "status": "OPEN",
     "partial_taken": false,
-    "opened_at": "2026-04-16 06:59:06",
-    "last_score": 94.62,
-    "margin": 929.8128,
-    "notional": 2789.4383,
+    "opened_at": "2026-04-16 20:50:41",
+    "last_score": 96.31,
+    "margin": 919.9416,
+    "notional": 2759.8249,
     "leverage": 3.0,
-    "risk_amount": 38.7422,
-    "stop_distance_pct": 0.9362,
-    "closed_at": "2026-04-16 07:42:19",
-    "exit_price": 3.233,
-    "exit_reason": "STOP_LOSS",
-    "realized_pnl": -36.3218
+    "risk_amount": 38.3309,
+    "stop_distance_pct": 0.403
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
@@ -123,7 +119,7 @@
     "tp": 0.9029353,
     "sl": 0.98295714,
     "size": 1.0,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": false,
     "opened_at": "2026-04-16 19:45:22",
     "last_score": 99.78,
@@ -131,7 +127,11 @@
     "notional": 2771.5591,
     "leverage": 3.0,
     "risk_amount": 38.4939,
-    "stop_distance_pct": 0.3734
+    "stop_distance_pct": 0.3734,
+    "closed_at": "2026-04-16 20:50:41",
+    "exit_price": 0.9865,
+    "exit_reason": "STOP_LOSS",
+    "realized_pnl": -22.5943
   },
   "APTUSDT": {
     "symbol": "APTUSDT",
@@ -303,7 +303,7 @@
     "tp": 54.22507965,
     "sl": 55.28207007,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-04-16 12:24:08",
     "last_score": 89.67,
@@ -311,7 +311,11 @@
     "notional": 2755.9612,
     "leverage": 3.0,
     "risk_amount": 38.2772,
-    "stop_distance_pct": 0.1456
+    "stop_distance_pct": 0.1456,
+    "closed_at": "2026-04-16 20:50:41",
+    "exit_price": 55.36,
+    "exit_reason": "PROTECTIVE_EXIT",
+    "realized_pnl": 1.7721
   },
   "ARBUSDT": {
     "symbol": "ARBUSDT",

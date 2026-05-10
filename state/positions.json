@@ -139,26 +139,22 @@
   },
   "APTUSDT": {
     "symbol": "APTUSDT",
-    "side": "SHORT",
-    "strategy": "VWAP_2.5",
-    "market": "RANGE",
-    "entry": 1.1262,
-    "tp": 1.04089074,
-    "sl": 1.12964286,
+    "side": "LONG",
+    "strategy": "TrendPullback_Long",
+    "market": "TREND_UP",
+    "entry": 1.1753,
+    "tp": 1.20499143,
+    "sl": 1.15674286,
     "size": 1.0,
-    "status": "CLOSED",
+    "status": "OPEN",
     "partial_taken": false,
-    "opened_at": "2026-05-11 00:04:16",
-    "last_score": 100,
-    "margin": 667.521,
-    "notional": 2002.563,
+    "opened_at": "2026-05-11 05:00:00",
+    "last_score": 100.0,
+    "margin": 574.0806,
+    "notional": 1722.2418,
     "leverage": 3.0,
-    "risk_amount": 27.8134,
-    "stop_distance_pct": 0.3057,
-    "closed_at": "2026-05-11 01:06:23",
-    "exit_price": 1.1593,
-    "exit_reason": "STOP_LOSS",
-    "realized_pnl": -60.4591
+    "risk_amount": 27.193,
+    "stop_distance_pct": 1.5789
   },
   "ADAUSDT": {
     "symbol": "ADAUSDT",
@@ -215,7 +211,7 @@
     "tp": 2.04181714,
     "sl": 2.02651429,
     "size": 1.0,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": false,
     "opened_at": "2026-05-11 04:04:11",
     "last_score": 93.03,
@@ -223,7 +219,11 @@
     "notional": 1991.2201,
     "leverage": 3.0,
     "risk_amount": 27.6558,
-    "stop_distance_pct": 0.2896
+    "stop_distance_pct": 0.2896,
+    "closed_at": "2026-05-11 05:00:00",
+    "exit_price": 1.9919,
+    "exit_reason": "STOP_LOSS",
+    "realized_pnl": -41.2724
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -418,7 +418,7 @@
     "tp": 1.49164,
     "sl": 1.47825,
     "size": 1.0,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": false,
     "opened_at": "2026-05-11 03:12:22",
     "last_score": 85.44,
@@ -426,6 +426,10 @@
     "notional": 1990.5034,
     "leverage": 3.0,
     "risk_amount": 27.6459,
-    "stop_distance_pct": 0.3472
+    "stop_distance_pct": 0.3472,
+    "closed_at": "2026-05-11 05:00:00",
+    "exit_price": 1.4503,
+    "exit_reason": "STOP_LOSS",
+    "realized_pnl": -46.0077
   }
 }

@@ -261,7 +261,7 @@
     "tp": 0.1109816,
     "sl": 0.11011823,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-05-10 19:38:26",
     "last_score": 97.19,
@@ -269,7 +269,11 @@
     "notional": 2025.1052,
     "leverage": 3.0,
     "risk_amount": 28.1265,
-    "stop_distance_pct": 0.1698
+    "stop_distance_pct": 0.1698,
+    "closed_at": "2026-05-11 03:12:22",
+    "exit_price": 0.11113,
+    "exit_reason": "TAKE_PROFIT",
+    "realized_pnl": 55.3354
   },
   "BTCUSDT": {
     "symbol": "BTCUSDT",
@@ -412,24 +416,20 @@
   "XRPUSDT": {
     "symbol": "XRPUSDT",
     "side": "LONG",
-    "strategy": "VWAP_2.0",
-    "market": "RANGE",
-    "entry": 1.3824,
-    "tp": 1.41105077,
-    "sl": 1.37976429,
+    "strategy": "TrendPullback_Long",
+    "market": "TREND_UP",
+    "entry": 1.4834,
+    "tp": 1.49164,
+    "sl": 1.47825,
     "size": 1.0,
-    "status": "CLOSED",
+    "status": "OPEN",
     "partial_taken": false,
-    "opened_at": "2026-04-29 20:52:22",
-    "last_score": 89.69,
-    "margin": 847.6269,
-    "notional": 2542.8806,
+    "opened_at": "2026-05-11 03:12:22",
+    "last_score": 85.44,
+    "margin": 663.5011,
+    "notional": 1990.5034,
     "leverage": 3.0,
-    "risk_amount": 35.3178,
-    "stop_distance_pct": 0.1907,
-    "closed_at": "2026-04-29 22:59:56",
-    "exit_price": 1.3721,
-    "exit_reason": "STOP_LOSS",
-    "realized_pnl": -20.9808
+    "risk_amount": 27.6459,
+    "stop_distance_pct": 0.3472
   }
 }

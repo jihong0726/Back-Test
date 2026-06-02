@@ -1,57 +1,44 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-06-03 04:12:06
+Generated At: 2026-06-03 06:27:38
 
 === ACCOUNT ===
- initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   4281.841764 4281.8418    1028.2342    3253.6076  -2903.909634             0.0    190.473573 5245.082295 2026-06-03 04:12:05
+ initial_balance  cash_balance   equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
+         10000.0   4259.584332 4266.474     514.1171    3752.3569  -2926.105372          6.8897    190.535267 5246.316176 2026-06-03 06:27:38
 
 === MARKET STATES ===
   symbol     market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT TREND_DOWN 67364.20000 90.5841       -5.9037       0.2321  93.28
- ETHUSDT TREND_DOWN  1914.99000 98.6175       -3.7362       0.2332  93.28
- SOLUSDT TREND_DOWN    75.58000 78.4651       -6.4048      -0.2111   0.00
- XRPUSDT TREND_DOWN     1.22210 70.0000       -6.0504      -0.0057   0.00
-DOGEUSDT TREND_DOWN     0.09413 86.4865       -4.9319      -0.0748   0.00
- BNBUSDT TREND_DOWN   661.15000 82.5301       -5.7072       0.0822  92.45
- ADAUSDT TREND_DOWN     0.21620 78.5714       -5.7648       0.1516  88.83
-AVAXUSDT TREND_DOWN     8.34600 85.9060       -4.9904       0.1519  92.84
-LINKUSDT TREND_DOWN     8.53700 81.6176       -4.8000       0.0932  92.51
- LTCUSDT      RANGE    48.27000 88.1579       -4.5163       0.2672   0.00
- APTUSDT TREND_DOWN     0.84510 86.1878       -7.8821      -0.1509   0.00
- SUIUSDT TREND_DOWN     0.82830 83.5294       -5.7706       0.4406  94.42
- ARBUSDT TREND_DOWN     0.09500 75.0000       -5.4408       0.3454  89.90
-  OPUSDT TREND_DOWN     0.11920 83.7209       -0.3024       0.4102  70.79
-ATOMUSDT TREND_DOWN     1.80860 73.6842       -7.8063      -0.2455   0.00
-NEARUSDT      RANGE     2.65620 93.6369        7.9532       2.3737 100.00
- DOTUSDT TREND_DOWN     1.10400 50.0000       -4.9140       0.2575   0.00
- FILUSDT TREND_DOWN     0.87220 91.1917       -7.7061      -0.0297   0.00
- INJUSDT TREND_DOWN     6.63800 75.2137        1.6633       0.1324  85.68
+ BTCUSDT      RANGE 67404.40000 45.0126       -5.6929      -0.0228    0.0
+ ETHUSDT TREND_DOWN  1908.44000 61.8971       -3.9302       0.4034    0.0
+ SOLUSDT TREND_DOWN    75.50900 48.3636       -6.3107       0.0904    0.0
+ XRPUSDT      RANGE     1.22440 47.9821       -5.7252       0.1531    0.0
+DOGEUSDT TREND_DOWN     0.09418 50.6787       -4.7347       0.1459    0.0
+ BNBUSDT      RANGE   657.83000 45.9272       -6.1896      -0.1129    0.0
+ ADAUSDT      RANGE     0.21610 45.4545       -5.6817       0.0895    0.0
+AVAXUSDT TREND_DOWN     8.30900 46.6102       -5.2549       0.0675    0.0
+LINKUSDT      RANGE     8.53200 49.5370       -4.6990       0.1919    0.0
+ LTCUSDT      RANGE    47.99000 43.4783       -4.8203      -0.1474    0.0
+ APTUSDT TREND_DOWN     0.84490 55.3030       -7.7433       0.2637    0.0
+ SUIUSDT      RANGE     0.82460 45.7490       -5.9890      -0.0302    0.0
+ ARBUSDT TREND_DOWN     0.09410 40.0000       -6.2473      -0.1360    0.0
+  OPUSDT      RANGE     0.11880 50.0000       -0.8318       0.1253    0.0
+ATOMUSDT      RANGE     1.82820 48.1159       -6.7266       0.2762    0.0
+NEARUSDT   TREND_UP     2.69230 64.3200        9.0700       0.7590    0.0
+ DOTUSDT      RANGE     1.09900 44.1176       -5.1191       0.0293    0.0
+ FILUSDT      RANGE     0.87910 56.3636       -6.8813       0.3561    0.0
+ INJUSDT TREND_DOWN     6.68800 61.7021        2.0780       0.5826    0.0
 
 === OPEN POSITIONS ===
-  symbol  side            strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
- SUIUSDT SHORT TrendPullback_Short 0.8283 0.820529 0.833157 514.1171 1542.3514       3.0   1.0 2026-06-03 04:12:05
-NEARUSDT SHORT            VWAP_2.5 2.6562 2.460512 2.690607 514.1171 1542.3514       3.0   1.0 2026-06-03 04:12:05
+ symbol  side            strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
+SUIUSDT SHORT TrendPullback_Short 0.8283 0.820529 0.824849 514.1171 1542.3514       3.0   1.0 2026-06-03 04:12:05
 
 === POSITION DECISIONS ===
-               time   symbol  type action                          reason  current_price  pnl_pct  pnl_usd     market            strategy  side  entry       tp       sl   margin  notional  leverage
-2026-06-03 04:12:05 NEARUSDT ENTRY   OPEN 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归         2.6562      0.0      0.0      RANGE            VWAP_2.5 SHORT 2.6562 2.460512 2.690607 514.1171 1542.3514       3.0
-2026-06-03 04:12:05  SUIUSDT ENTRY   OPEN   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空         0.8283      0.0      0.0 TREND_DOWN TrendPullback_Short SHORT 0.8283 0.820529 0.833157 514.1171 1542.3514       3.0
+               time   symbol     type  action          reason  current_price  pnl_pct  pnl_usd   market            strategy  side  entry       tp       sl
+2026-06-03 06:27:38  ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0617U            NaN      NaN      NaN      NaN                 NaN   NaN    NaN      NaN      NaN
+2026-06-03 06:27:38  SUIUSDT POSITION MOVE_SL       盈利扩大，下移止损         0.8246   0.4487   6.8897    RANGE TrendPullback_Short SHORT 0.8283 0.820529 0.833157
+2026-06-03 06:27:38 NEARUSDT POSITION   CLOSE            触发止损         2.6923  -1.3409 -22.1957 TREND_UP            VWAP_2.5 SHORT 2.6562 2.460512 2.690607
 
 === NEW ENTRY SIGNALS ===
-  symbol     market            strategy action  entry       tp       sl  score                          reason   margin  notional  leverage  risk_amount  open_fee
-NEARUSDT      RANGE            VWAP_2.5  SHORT 2.6562 2.460512 2.690607 100.00 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 514.1171 1542.3514       3.0      21.4215    1.2339
- SUIUSDT TREND_DOWN TrendPullback_Short  SHORT 0.8283 0.820529 0.833157  94.42   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 514.1171 1542.3514       3.0      21.4215    1.2339
+No new entry signals.
 
 === MARKET SCAN ===
-  symbol     market            strategy action  score      entry           tp           sl                          reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
-NEARUSDT      RANGE            VWAP_2.5  SHORT 100.00     2.6562     2.460512     2.690607 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 93.6369        7.9532       2.3737         1.2954
- SUIUSDT TREND_DOWN TrendPullback_Short  SHORT  94.42     0.8283     0.820529     0.833157   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 83.5294       -5.7706       0.4406         0.5864
- BTCUSDT TREND_DOWN TrendPullback_Short  SHORT  93.28 67364.2000 66970.371429 67610.342857   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 90.5841       -5.9037       0.2321         0.3654
- ETHUSDT TREND_DOWN TrendPullback_Short  SHORT  93.28  1914.9900  1902.305429  1922.917857   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 98.6175       -3.7362       0.2332         0.4140
-AVAXUSDT TREND_DOWN TrendPullback_Short  SHORT  92.84     8.3460     8.276400     8.389500   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 85.9060       -4.9904       0.1519         0.5212
-LINKUSDT TREND_DOWN TrendPullback_Short  SHORT  92.51     8.5370     8.467629     8.580357   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 81.6176       -4.8000       0.0932         0.5079
- BNBUSDT TREND_DOWN TrendPullback_Short  SHORT  92.45   661.1500   657.235714   663.596429   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 82.5301       -5.7072       0.0822         0.3700
- ARBUSDT TREND_DOWN TrendPullback_Short  SHORT  89.90     0.0950     0.094109     0.095557   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 75.0000       -5.4408       0.3454         0.5865
- ADAUSDT TREND_DOWN TrendPullback_Short  SHORT  88.83     0.2162     0.214463     0.217286   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 78.5714       -5.7648       0.1516         0.5022
- INJUSDT TREND_DOWN TrendPullback_Short  SHORT  85.68     6.6380     6.539371     6.699643   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 75.2137        1.6633       0.1324         0.9286
-  OPUSDT TREND_DOWN TrendPullback_Short  SHORT  70.79     0.1192     0.117669     0.120157   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 83.7209       -0.3024       0.4102         0.8030
+No market scan signals.

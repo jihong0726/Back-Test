@@ -1,43 +1,48 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-06-08 04:00:19
+Generated At: 2026-06-08 05:17:52
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   4039.243467 4039.2435          0.0    4039.2435  -3092.309746             0.0    193.260878 5350.371817 2026-06-08 04:00:19
+         10000.0   4036.916863 4036.9169     969.4184    3067.4985  -3092.309746             0.0    193.260878 5352.698422 2026-06-08 05:17:52
 
 === MARKET STATES ===
   symbol     market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT TREND_DOWN 61209.70000 31.3086       -3.0191      -0.5786    0.0
- ETHUSDT TREND_DOWN  1608.80000 46.3542       -5.3248      -0.4836    0.0
- SOLUSDT TREND_DOWN    63.75400 33.0000       -5.2731      -0.8038    0.0
- XRPUSDT TREND_DOWN     1.12220 29.9065       -1.8259      -0.6554    0.0
-DOGEUSDT TREND_DOWN     0.08317 34.8485       -3.8987      -0.6181    0.0
- BNBUSDT      RANGE   587.41000 39.2045       -2.6392      -0.4823    0.0
- ADAUSDT TREND_DOWN     0.15800 19.0476       -9.8747      -1.1364    0.0
-AVAXUSDT TREND_DOWN     6.52000 27.6596      -10.4607      -0.9995    0.0
-LINKUSDT TREND_DOWN     7.57400 40.4040       -3.2221      -0.6652    0.0
- LTCUSDT TREND_DOWN    41.28000 52.2727       -6.5465      -0.4834    0.0
- APTUSDT TREND_DOWN     0.64810 25.5556      -11.1687      -1.1578    0.0
- SUIUSDT TREND_DOWN     0.72980 32.5301       -2.6590      -0.8197    0.0
- ARBUSDT TREND_DOWN     0.07950 30.7692       -8.5085      -0.9170    0.0
-  OPUSDT TREND_DOWN     0.09200 31.2500      -11.9625      -1.1716    0.0
-ATOMUSDT TREND_DOWN     1.65370 38.5965       -6.1027      -0.6757    0.0
-NEARUSDT TREND_DOWN     1.96120 21.0256      -14.7474      -1.5414    0.0
- DOTUSDT TREND_DOWN     0.94100 33.3333       -7.1211      -0.9518    0.0
- FILUSDT TREND_DOWN     0.74090 43.4783       -9.6702      -0.7991    0.0
- INJUSDT TREND_DOWN     5.18500 20.0000      -10.5199      -1.0873    0.0
+ BTCUSDT      RANGE 61845.00000 57.7569       -1.8415       0.1857   0.00
+ ETHUSDT      RANGE  1628.11000 64.1009       -3.8788       0.2821   0.00
+ SOLUSDT      RANGE    64.67000 60.8847       -3.6507       0.2991   0.00
+ XRPUSDT      RANGE     1.12980 49.2188       -0.9777      -0.0215   0.00
+DOGEUSDT      RANGE     0.08398 51.0638       -2.7293       0.0874   0.00
+ BNBUSDT      RANGE   593.98000 69.3002       -1.1618       0.2942   0.00
+ ADAUSDT TREND_DOWN     0.16040 50.0000       -8.0510       0.1639   0.00
+AVAXUSDT TREND_DOWN     6.59400 55.9633       -8.9723       0.0586   0.00
+LINKUSDT      RANGE     7.66000 52.5641       -1.8794       0.0870   0.00
+ LTCUSDT      RANGE    41.52000 57.5758       -5.8251      -0.0167   0.00
+ APTUSDT TREND_DOWN     0.65880 73.3333       -9.2584       0.3175  89.75
+ SUIUSDT      RANGE     0.73950 52.6316       -1.1020       0.1694   0.00
+ ARBUSDT TREND_DOWN     0.08060 63.6364       -7.0031       0.2342   0.00
+  OPUSDT      RANGE     0.09420 72.7273       -9.5937       0.4372   0.00
+ATOMUSDT      RANGE     1.68140 97.6000       -4.4468       0.5916   0.00
+NEARUSDT      RANGE     1.99500 38.4615      -13.0526      -0.2291   0.00
+ DOTUSDT TREND_DOWN     0.95200 55.5556       -5.6739       0.1253   0.00
+ FILUSDT      RANGE     0.75290 58.9744       -8.0263       0.2837   0.00
+ INJUSDT TREND_DOWN     5.27600 70.0000       -8.5215       0.5418  86.98
 
 === OPEN POSITIONS ===
-No open positions.
+ symbol  side            strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
+INJUSDT SHORT TrendPullback_Short 5.2760 5.233714 5.302429 484.7092 1454.1277       3.0   1.0 2026-06-08 05:17:52
+APTUSDT SHORT TrendPullback_Short 0.6588 0.655737 0.660714 484.7092 1454.1277       3.0   1.0 2026-06-08 05:17:52
 
 === POSITION DECISIONS ===
-               time  symbol     type  action          reason  current_price  pnl_pct  pnl_usd     market strategy side   entry        tp        sl
-2026-06-08 04:00:19 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0592U            NaN      NaN      NaN        NaN      NaN  NaN     NaN       NaN       NaN
-2026-06-08 04:00:19 APTUSDT POSITION   CLOSE            触发止损         0.6481  -2.7607 -41.9920 TREND_DOWN VWAP_2.5 LONG  0.6665  0.738484  0.664771
-2026-06-08 04:00:19 LTCUSDT POSITION   CLOSE            触发止损        41.2800  -1.7611 -27.2468 TREND_DOWN VWAP_2.0 LONG 42.0200 44.434117 41.904286
+               time  symbol  type action                        reason  current_price  pnl_pct  pnl_usd     market            strategy  side  entry       tp       sl   margin  notional  leverage
+2026-06-08 05:17:52 APTUSDT ENTRY   OPEN 下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空         0.6588      0.0      0.0 TREND_DOWN TrendPullback_Short SHORT 0.6588 0.655737 0.660714 484.7092 1454.1277       3.0
+2026-06-08 05:17:52 INJUSDT ENTRY   OPEN 下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空         5.2760      0.0      0.0 TREND_DOWN TrendPullback_Short SHORT 5.2760 5.233714 5.302429 484.7092 1454.1277       3.0
 
 === NEW ENTRY SIGNALS ===
-No new entry signals.
+ symbol     market            strategy action  entry       tp       sl  score                        reason   margin  notional  leverage  risk_amount  open_fee
+APTUSDT TREND_DOWN TrendPullback_Short  SHORT 0.6588 0.655737 0.660714  89.75 下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 484.7092 1454.1277       3.0      20.1962    1.1633
+INJUSDT TREND_DOWN TrendPullback_Short  SHORT 5.2760 5.233714 5.302429  86.98 下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 484.7092 1454.1277       3.0      20.1962    1.1633
 
 === MARKET SCAN ===
-No market scan signals.
+ symbol     market            strategy action  score  entry       tp       sl                        reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
+APTUSDT TREND_DOWN TrendPullback_Short  SHORT  89.75 0.6588 0.655737 0.660714 下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 73.3333       -9.2584       0.3175         0.2906
+INJUSDT TREND_DOWN TrendPullback_Short  SHORT  86.98 5.2760 5.233714 5.302429 下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 70.0000       -8.5215       0.5418         0.5009

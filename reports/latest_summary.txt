@@ -1,48 +1,44 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-06-13 14:04:52
+Generated At: 2026-06-13 17:30:50
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   3974.858606 3991.0094     958.8246    3032.1848  -3118.204627         16.1508    195.010747  5421.55086 2026-06-13 14:04:52
+         10000.0   3946.276529 3948.0474     479.7655    3468.2819  -3146.729175          1.7708    195.068277 5422.700601 2026-06-13 17:30:50
 
 === MARKET STATES ===
   symbol   market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT    RANGE 63540.00000 49.0172        1.4950       0.0035   0.00
- ETHUSDT    RANGE  1664.23000 51.9084        0.2143      -0.0203   0.00
- SOLUSDT    RANGE    66.70400 54.1237        1.5615      -0.0627   0.00
- XRPUSDT    RANGE     1.13160 55.0000       -0.3526      -0.0566   0.00
-DOGEUSDT    RANGE     0.08615 61.1111        0.0912       0.0466   0.00
- BNBUSDT    RANGE   600.24000 75.8621        0.4901       0.0285   0.00
- ADAUSDT    RANGE     0.16970 58.3333        1.9979      -0.0988   0.00
-AVAXUSDT    RANGE     6.58700 55.5556       -0.2673      -0.0310   0.00
-LINKUSDT    RANGE     7.88300 62.2642        0.7295       0.0525   0.00
- LTCUSDT    RANGE    43.14000 46.6667        1.2711      -0.1290   0.00
- APTUSDT    RANGE     0.65500 83.5443        1.0063       0.2922   0.00
- SUIUSDT    RANGE     0.75050 65.6716        0.1764       0.0794   0.00
- ARBUSDT    RANGE     0.08400 66.6667        2.9778       0.0464  88.26
-  OPUSDT TREND_UP     0.10230 83.3333        7.5950       0.7728   0.00
-ATOMUSDT    RANGE     1.98130 46.8599        5.2042      -0.3630   0.00
-NEARUSDT    RANGE     1.99910 59.7484       -4.5239       0.0181   0.00
- DOTUSDT    RANGE     0.96600 83.3333        1.3777       0.1354   0.00
- FILUSDT    RANGE     0.75880 66.0377        0.0448      -0.0899   0.00
- INJUSDT    RANGE     5.08400 75.0000       -5.7289      -0.1062   0.00
+ BTCUSDT    RANGE 63787.60000 62.9464        1.8900       0.0170    0.0
+ ETHUSDT    RANGE  1673.26000 44.2211        0.7816      -0.0353    0.0
+ SOLUSDT    RANGE    67.37800 63.2219        2.5507       0.0612    0.0
+ XRPUSDT    RANGE     1.14230 46.5116        0.6175       0.0140    0.0
+DOGEUSDT TREND_UP     0.08723 63.2653        1.3043       0.1269    0.0
+ BNBUSDT    RANGE   603.27000 44.5415        0.9855       0.0055    0.0
+ ADAUSDT TREND_UP     0.17260 40.0000        3.6101      -0.1152    0.0
+AVAXUSDT    RANGE     6.65300 50.0000        0.7665      -0.0138    0.0
+LINKUSDT    RANGE     7.95100 44.1860        1.5875      -0.0362    0.0
+ LTCUSDT    RANGE    43.60000 42.8571        2.2748       0.0176    0.0
+ APTUSDT TREND_UP     0.66710 54.7619        2.8198      -0.1668    0.0
+ SUIUSDT TREND_UP     0.76520 68.6047        2.1102       0.2862    0.0
+ ARBUSDT TREND_UP     0.08560 50.0000        4.7866      -0.0083    0.0
+  OPUSDT TREND_UP     0.10740 57.5758       12.2532       0.1925    0.0
+ATOMUSDT    RANGE     1.98910 47.5113        5.4175       0.0636    0.0
+NEARUSDT    RANGE     2.02050 47.3333       -3.5073      -0.2098    0.0
+ DOTUSDT TREND_UP     0.98200 55.5556        2.9856      -0.0935    0.0
+ FILUSDT TREND_UP     0.78180 84.3750        3.0507       0.5689    0.0
+ INJUSDT TREND_UP     5.30600 51.2195       -1.4576       0.3313    0.0
 
 === OPEN POSITIONS ===
  symbol  side strategy  entry        tp        sl   margin  notional  leverage  size           opened_at
-SOLUSDT SHORT VWAP_2.5 67.461 65.723277 67.461000 479.7655 1439.2965       3.0   0.5 2026-06-13 09:53:47
-ARBUSDT SHORT VWAP_2.0  0.084  0.081571  0.084136 479.0591 1437.1773       3.0   1.0 2026-06-13 14:04:52
+SOLUSDT SHORT VWAP_2.5 67.461 65.723277 67.336782 479.7655 1439.2965       3.0   0.5 2026-06-13 09:53:47
 
 === POSITION DECISIONS ===
-               time  symbol     type     action                       reason  current_price  pnl_pct  pnl_usd   market strategy  side  entry        tp        sl   margin  notional  leverage
-2026-06-13 14:04:52 ACCOUNT  ACCOUNT    FUNDING              本轮收取资金费 0.0576U            NaN      NaN      NaN      NaN      NaN   NaN    NaN       NaN       NaN      NaN       NaN       NaN
-2026-06-13 14:04:52 SOLUSDT POSITION PARTIAL_TP        达到第一目标，部分止盈并下移止损到入场附近        66.7040   1.1349  16.1508    RANGE VWAP_2.5 SHORT 67.461 65.723277 67.578714      NaN       NaN       NaN
-2026-06-13 14:04:52  OPUSDT POSITION      CLOSE                         触发止损         0.1023  -1.2708 -19.6770 TREND_UP VWAP_2.5 SHORT  0.101  0.095064  0.101321      NaN       NaN       NaN
-2026-06-13 14:04:52 ARBUSDT    ENTRY       OPEN 震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归         0.0840   0.0000   0.0000    RANGE VWAP_2.0 SHORT  0.084  0.081571  0.084136 479.0591 1437.1773       3.0
+               time  symbol     type  action          reason  current_price  pnl_pct  pnl_usd   market strategy  side  entry        tp        sl
+2026-06-13 17:30:50 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0575U            NaN      NaN      NaN      NaN      NaN   NaN    NaN       NaN       NaN
+2026-06-13 17:30:50 SOLUSDT POSITION MOVE_SL       盈利扩大，下移止损        67.3780   0.1232   1.7708    RANGE VWAP_2.5 SHORT 67.461 65.723277 67.461000
+2026-06-13 17:30:50 ARBUSDT POSITION   CLOSE            触发止损         0.0856  -1.8692 -28.5245 TREND_UP VWAP_2.0 SHORT  0.084  0.081571  0.084136
 
 === NEW ENTRY SIGNALS ===
- symbol market strategy action  entry       tp       sl  score                       reason   margin  notional  leverage  risk_amount  open_fee
-ARBUSDT  RANGE VWAP_2.0  SHORT  0.084 0.081571 0.084136  88.26 震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归 479.0591 1437.1773       3.0      19.9608    1.1497
+No new entry signals.
 
 === MARKET SCAN ===
- symbol market strategy action  score  entry       tp       sl                       reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
-ARBUSDT  RANGE VWAP_2.0  SHORT  88.26  0.084 0.081571 0.084136 震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归 66.6667        2.9778       0.0464         0.1616
+No market scan signals.

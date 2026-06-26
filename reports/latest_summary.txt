@@ -1,40 +1,44 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-06-26 23:40:27
+Generated At: 2026-06-27 01:21:57
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   3377.202098 3377.2021          0.0    3377.2021  -3613.529937             0.0    200.776189 5616.983553 2026-06-26 23:40:27
+         10000.0   3376.229463 3376.2295     405.2643    2970.9652  -3613.529937             0.0    200.776189 5617.956187 2026-06-27 01:21:56
 
 === MARKET STATES ===
-  symbol   market      close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT TREND_UP 60419.4000 71.5200       -1.6546       0.8093    0.0
- ETHUSDT TREND_UP  1585.5500 70.5477       -2.8066       1.0639    0.0
- SOLUSDT TREND_UP    72.0590 65.3109        3.4842       1.4066    0.0
- XRPUSDT TREND_UP     1.0465 60.5128       -2.7824       0.6886    0.0
-DOGEUSDT TREND_UP     0.0751 77.2414       -2.7808       1.0059    0.0
- BNBUSDT    RANGE   566.4900 76.3158       -0.3339       0.7345    0.0
- ADAUSDT TREND_UP     0.1480 80.4878       -0.5610       1.5620    0.0
-AVAXUSDT TREND_UP     6.3380 70.0599        1.0249       1.2831    0.0
-LINKUSDT TREND_UP     7.3380 76.6667       -2.0476       1.0406    0.0
- LTCUSDT    RANGE    41.5000 68.4211       -0.9184       0.7453    0.0
- APTUSDT TREND_UP     0.6017 78.8618       -3.2586       1.2978    0.0
- SUIUSDT TREND_UP     0.6946 69.8324        0.1761       1.1327    0.0
- ARBUSDT TREND_UP     0.0735 71.4286       -5.0540       1.0218    0.0
-  OPUSDT TREND_UP     0.1064 53.8462        4.3628       0.8458    0.0
-ATOMUSDT    RANGE     1.6091 64.8276       -3.9080       0.2905    0.0
-NEARUSDT    RANGE     1.8121 67.8715       -8.1171       0.9852    0.0
- DOTUSDT TREND_UP     0.8560 72.2222       -2.6258       1.0665    0.0
- FILUSDT TREND_UP     0.7376 74.8503       -2.1678       1.1895    0.0
- INJUSDT TREND_UP     4.6620 73.2558        4.2689       1.1588    0.0
+  symbol   market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
+ BTCUSDT    RANGE 60077.90000 45.2001       -2.1389      -0.0447   0.00
+ ETHUSDT TREND_UP  1584.84000 71.1055       -2.7507       0.3412   0.00
+ SOLUSDT TREND_UP    72.38900 31.7729        3.9307       0.1156   0.00
+ XRPUSDT TREND_UP     1.04680 50.5376       -2.6320       0.1376   0.00
+DOGEUSDT TREND_UP     0.07533 45.3125       -2.3929       0.2335   0.00
+ BNBUSDT TREND_UP   566.15000 34.0517       -0.3528       0.0902   0.00
+ ADAUSDT TREND_UP     0.14820 47.3684       -0.3708       0.2189   0.00
+AVAXUSDT TREND_UP     6.42900 60.0000        2.3984       0.6868   0.00
+LINKUSDT TREND_UP     7.36100 48.5714       -1.6485       0.2488   0.00
+ LTCUSDT TREND_UP    41.79000 70.2703       -0.1680       0.4578   0.00
+ APTUSDT TREND_UP     0.60770 44.7059       -2.2025       0.4042   0.00
+ SUIUSDT TREND_UP     0.69600 53.0120        0.4002       0.3472   0.00
+ ARBUSDT TREND_UP     0.07410 62.5000       -3.9883       0.5078   0.00
+  OPUSDT TREND_UP     0.10500  8.3333        2.9052      -0.5971  95.28
+ATOMUSDT    RANGE     1.60200 83.0882       -4.2143       0.2234   0.00
+NEARUSDT    RANGE     1.80990 41.8719       -7.8444       0.2487   0.00
+ DOTUSDT TREND_UP     0.85800 54.5455       -2.2618       0.3299   0.00
+ FILUSDT TREND_UP     0.75130 79.2793       -0.2163       1.0618   0.00
+ INJUSDT TREND_UP     4.75600 36.8421        6.2713       0.1348   0.00
 
 === OPEN POSITIONS ===
-No open positions.
+symbol side           strategy  entry      tp      sl   margin  notional  leverage  size           opened_at
+OPUSDT LONG TrendPullback_Long  0.105 0.10572 0.10455 405.2643 1215.7928       3.0   1.0 2026-06-27 01:21:56
 
 === POSITION DECISIONS ===
-No position decisions.
+               time symbol  type action                    reason  current_price  pnl_pct  pnl_usd   market           strategy side  entry      tp      sl   margin  notional  leverage
+2026-06-27 01:21:56 OPUSDT ENTRY   OPEN 上升趋势中回踩 EMA20，RSI 偏低，顺势做多          0.105      0.0      0.0 TREND_UP TrendPullback_Long LONG  0.105 0.10572 0.10455 405.2643 1215.7928       3.0
 
 === NEW ENTRY SIGNALS ===
-No new entry signals.
+symbol   market           strategy action  entry      tp      sl  score                    reason   margin  notional  leverage  risk_amount  open_fee
+OPUSDT TREND_UP TrendPullback_Long   LONG  0.105 0.10572 0.10455  95.28 上升趋势中回踩 EMA20，RSI 偏低，顺势做多 405.2643 1215.7928       3.0       16.886    0.9726
 
 === MARKET SCAN ===
-No market scan signals.
+symbol   market           strategy action  score  entry      tp      sl                    reason   rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
+OPUSDT TREND_UP TrendPullback_Long   LONG  95.28  0.105 0.10572 0.10455 上升趋势中回踩 EMA20，RSI 偏低，顺势做多 8.3333        2.9052      -0.5971         0.4286

@@ -77,7 +77,7 @@
     "tp": 1.87947799,
     "sl": 2.04185,
     "size": 1.0,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": false,
     "opened_at": "2026-07-04 05:20:07",
     "last_score": 94.07,
@@ -85,7 +85,11 @@
     "notional": 1193.063,
     "leverage": 3.0,
     "risk_amount": 16.5703,
-    "stop_distance_pct": 0.4007
+    "stop_distance_pct": 0.4007,
+    "closed_at": "2026-07-04 06:28:40",
+    "exit_price": 2.0471,
+    "exit_reason": "STOP_LOSS",
+    "realized_pnl": -8.8155
   },
   "BNBUSDT": {
     "symbol": "BNBUSDT",
@@ -297,25 +301,21 @@
   "LTCUSDT": {
     "symbol": "LTCUSDT",
     "side": "LONG",
-    "strategy": "VWAP_2.5",
-    "market": "RANGE",
-    "entry": 40.91,
-    "tp": 42.22546502,
-    "sl": 40.86071429,
+    "strategy": "TrendPullback_Long",
+    "market": "TREND_UP",
+    "entry": 44.89,
+    "tp": 45.05114286,
+    "sl": 44.78928571,
     "size": 1.0,
-    "status": "CLOSED",
+    "status": "OPEN",
     "partial_taken": false,
-    "opened_at": "2026-06-26 07:13:11",
-    "last_score": 97.06,
-    "margin": 414.4671,
-    "notional": 1243.4013,
+    "opened_at": "2026-07-04 06:28:40",
+    "last_score": 92.98,
+    "margin": 396.0621,
+    "notional": 1188.1862,
     "leverage": 3.0,
-    "risk_amount": 17.2695,
-    "stop_distance_pct": 0.1205,
-    "closed_at": "2026-06-26 09:29:39",
-    "exit_price": 40.75,
-    "exit_reason": "STOP_LOSS",
-    "realized_pnl": -5.8577
+    "risk_amount": 16.5026,
+    "stop_distance_pct": 0.2244
   },
   "ARBUSDT": {
     "symbol": "ARBUSDT",
@@ -414,7 +414,7 @@
     "tp": 1.13469714,
     "sl": 1.13478684,
     "size": 1.0,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": false,
     "opened_at": "2026-07-04 04:06:16",
     "last_score": 93.24,
@@ -422,6 +422,10 @@
     "notional": 1192.2354,
     "leverage": 3.0,
     "risk_amount": 16.5588,
-    "stop_distance_pct": 0.3711
+    "stop_distance_pct": 0.3711,
+    "closed_at": "2026-07-04 06:28:40",
+    "exit_price": 1.1294,
+    "exit_reason": "PROTECTIVE_EXIT",
+    "realized_pnl": 0.5259
   }
 }

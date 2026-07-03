@@ -123,7 +123,7 @@
     "tp": 0.73499213,
     "sl": 0.78149801,
     "size": 0.5,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": true,
     "opened_at": "2026-07-03 09:15:18",
     "last_score": 100,
@@ -131,7 +131,11 @@
     "notional": 1208.7145,
     "leverage": 3.0,
     "risk_amount": 16.7877,
-    "stop_distance_pct": 0.2619
+    "stop_distance_pct": 0.2619,
+    "closed_at": "2026-07-03 18:47:40",
+    "exit_price": 0.7886,
+    "exit_reason": "STOP_LOSS",
+    "realized_pnl": -5.8917
   },
   "APTUSDT": {
     "symbol": "APTUSDT",
@@ -211,7 +215,7 @@
     "tp": 1.58010857,
     "sl": 1.57245714,
     "size": 1.0,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": false,
     "opened_at": "2026-07-03 16:07:06",
     "last_score": 92.12,
@@ -219,7 +223,11 @@
     "notional": 1205.1334,
     "leverage": 3.0,
     "risk_amount": 16.738,
-    "stop_distance_pct": 0.1868
+    "stop_distance_pct": 0.1868,
+    "closed_at": "2026-07-03 18:47:40",
+    "exit_price": 1.5909,
+    "exit_reason": "TAKE_PROFIT",
+    "realized_pnl": 10.8929
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -404,24 +412,20 @@
   "XRPUSDT": {
     "symbol": "XRPUSDT",
     "side": "SHORT",
-    "strategy": "VWAP_2.0",
+    "strategy": "VWAP_2.5",
     "market": "RANGE",
-    "entry": 1.0925,
-    "tp": 1.05717734,
-    "sl": 1.09413571,
+    "entry": 1.1082,
+    "tp": 1.059352,
+    "sl": 1.1104,
     "size": 1.0,
-    "status": "CLOSED",
+    "status": "OPEN",
     "partial_taken": false,
-    "opened_at": "2026-07-03 12:57:45",
-    "last_score": 88.76,
-    "margin": 403.228,
-    "notional": 1209.684,
+    "opened_at": "2026-07-03 18:47:40",
+    "last_score": 98.72,
+    "margin": 401.4749,
+    "notional": 1204.4247,
     "leverage": 3.0,
-    "risk_amount": 16.8012,
-    "stop_distance_pct": 0.1497,
-    "closed_at": "2026-07-03 16:07:06",
-    "exit_price": 1.1013,
-    "exit_reason": "STOP_LOSS",
-    "realized_pnl": -10.7117
+    "risk_amount": 16.7281,
+    "stop_distance_pct": 0.1985
   }
 }

@@ -1,45 +1,55 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-07-04 17:38:47
+Generated At: 2026-07-04 19:09:25
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   3270.165777 3305.7121     785.3148    2520.3973  -3634.225288         35.5463     205.80425 5777.724617 2026-07-04 17:38:47
+         10000.0   3288.699805 3288.6998     789.7428     2498.957  -3613.748757             0.0    205.851368 5781.504755 2026-07-04 19:09:25
 
 === MARKET STATES ===
   symbol     market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT      RANGE 62419.10000 43.6379        3.6461      -0.1078    0.0
- ETHUSDT      RANGE  1755.13000 26.7857        7.0568      -0.1974    0.0
- SOLUSDT      RANGE    81.67800 38.3543        5.4605      -0.6227    0.0
- XRPUSDT      RANGE     1.13640 37.5000        5.4766      -0.3357    0.0
-DOGEUSDT      RANGE     0.07668 38.6667        4.4434      -0.2985    0.0
- BNBUSDT      RANGE   572.17000  0.0000        3.0035       0.0188    0.0
- ADAUSDT      RANGE     0.17550 30.7692       10.6796      -0.2903    0.0
-AVAXUSDT      RANGE     6.81800 14.5833        1.7628      -0.4902    0.0
-LINKUSDT      RANGE     7.88900 29.0909        5.3300      -0.3350    0.0
- LTCUSDT      RANGE    44.21000  0.0000        2.8297      -0.1488    0.0
- APTUSDT      RANGE     0.62300 37.3333        5.7607      -0.4965    0.0
- SUIUSDT      RANGE     0.75200 26.7606        5.1610      -0.5385    0.0
- ARBUSDT      RANGE     0.07910 30.0000        2.4079      -0.5633    0.0
-  OPUSDT      RANGE     0.10650 33.3333        6.7640      -0.5026    0.0
-ATOMUSDT      RANGE     1.57980 47.5728        1.6471      -0.1568    0.0
-NEARUSDT TREND_DOWN     1.95600 25.5639        3.3323      -0.8570    0.0
- DOTUSDT      RANGE     0.86900 33.3333        3.2413      -0.3707    0.0
- FILUSDT      RANGE     0.79460 41.1392        5.1978      -0.4014    0.0
- INJUSDT TREND_DOWN     4.76800 26.4151        1.8184      -0.6693    0.0
+ BTCUSDT      RANGE 62491.60000 61.7701        3.7501       0.0373   0.00
+ ETHUSDT      RANGE  1757.87000 46.3171        7.1351      -0.0151   0.00
+ SOLUSDT TREND_DOWN    81.70000 54.1844        5.3657      -0.0451   0.00
+ XRPUSDT      RANGE     1.14220 83.0189        5.8929       0.2024  97.11
+DOGEUSDT      RANGE     0.07712 77.1930        4.9647       0.2905  93.60
+ BNBUSDT      RANGE   572.20000 63.6015        2.9944       0.0895   0.00
+ ADAUSDT      RANGE     0.17660 85.7143       11.1739       0.4673  98.57
+AVAXUSDT      RANGE     6.84300 71.7391        2.0838       0.1537  92.85
+LINKUSDT      RANGE     7.91000 73.8095        5.5650       0.1277  92.70
+ LTCUSDT      RANGE    44.28000 40.7407        2.9693      -0.0172   0.00
+ APTUSDT      RANGE     0.62480 63.2353        6.0049       0.1039   0.00
+ SUIUSDT      RANGE     0.75460 61.9048        5.4488       0.0743   0.00
+ ARBUSDT      RANGE     0.07930 57.1429        2.6032       0.0279   0.00
+  OPUSDT      RANGE     0.10700 45.4545        7.2190      -0.0102   0.00
+ATOMUSDT      RANGE     1.58750 76.4045        2.1316       0.2436  93.34
+NEARUSDT TREND_DOWN     1.96450 60.7143        3.7235       0.0061   0.00
+ DOTUSDT      RANGE     0.87000 60.0000        3.3172       0.1430   0.00
+ FILUSDT      RANGE     0.79700 61.3861        5.4564       0.2336   0.00
+ INJUSDT TREND_DOWN     4.78300 54.5455        2.0993       0.0066   0.00
 
 === OPEN POSITIONS ===
  symbol  side strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
-ADAUSDT SHORT VWAP_2.5 0.1793 0.157815 0.176011 392.6574 1177.9721       3.0   0.5 2026-07-04 12:49:13
-XRPUSDT SHORT VWAP_2.5 1.1467 1.072210 1.140227 392.6574 1177.9721       3.0   0.5 2026-07-04 12:49:13
+ADAUSDT SHORT VWAP_2.5 0.1766 0.158850 0.177029 394.8714 1184.6143       3.0   1.0 2026-07-04 19:09:25
+XRPUSDT SHORT VWAP_2.5 1.1422 1.078637 1.144243 394.8714 1184.6143       3.0   1.0 2026-07-04 19:09:25
 
 === POSITION DECISIONS ===
-               time  symbol     type  action          reason  current_price  pnl_pct  pnl_usd market strategy  side  entry       tp     sl
-2026-07-04 17:38:47 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0471U            NaN      NaN      NaN    NaN      NaN   NaN    NaN      NaN    NaN
-2026-07-04 17:38:47 ADAUSDT POSITION MOVE_SL       盈利扩大，下移止损         0.1755   2.1652  24.9654  RANGE VWAP_2.5 SHORT 0.1793 0.157815 0.1793
-2026-07-04 17:38:47 XRPUSDT POSITION MOVE_SL       盈利扩大，下移止损         1.1364   0.9064  10.5809  RANGE VWAP_2.5 SHORT 1.1467 1.072210 1.1467
+               time  symbol     type  action                          reason  current_price  pnl_pct  pnl_usd market strategy  side  entry       tp       sl   margin  notional  leverage
+2026-07-04 19:09:25 ACCOUNT  ACCOUNT FUNDING                 本轮收取资金费 0.0471U            NaN      NaN      NaN    NaN      NaN   NaN    NaN      NaN      NaN      NaN       NaN       NaN
+2026-07-04 19:09:25 ADAUSDT POSITION   CLOSE                          保护止盈离场         0.1766   1.5289  16.7962  RANGE VWAP_2.5 SHORT 0.1793 0.157815 0.176011      NaN       NaN       NaN
+2026-07-04 19:09:25 XRPUSDT POSITION   CLOSE                          保护止盈离场         1.1422   0.3940   3.6803  RANGE VWAP_2.5 SHORT 1.1467 1.072210 1.140227      NaN       NaN       NaN
+2026-07-04 19:09:25 ADAUSDT    ENTRY    OPEN 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归         0.1766   0.0000   0.0000  RANGE VWAP_2.5 SHORT 0.1766 0.158850 0.177029 394.8714 1184.6143       3.0
+2026-07-04 19:09:25 XRPUSDT    ENTRY    OPEN 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归         1.1422   0.0000   0.0000  RANGE VWAP_2.5 SHORT 1.1422 1.078637 1.144243 394.8714 1184.6143       3.0
 
 === NEW ENTRY SIGNALS ===
-No new entry signals.
+ symbol market strategy action  entry       tp       sl  score                          reason   margin  notional  leverage  risk_amount  open_fee
+ADAUSDT  RANGE VWAP_2.5  SHORT 0.1766 0.158850 0.177029  98.57 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 394.8714 1184.6143       3.0       16.453    0.9477
+XRPUSDT  RANGE VWAP_2.5  SHORT 1.1422 1.078637 1.144243  97.11 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 394.8714 1184.6143       3.0       16.453    0.9477
 
 === MARKET SCAN ===
-No market scan signals.
+  symbol market strategy action  score   entry       tp       sl                          reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
+ ADAUSDT  RANGE VWAP_2.5  SHORT  98.57 0.17660 0.158850 0.177029 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 85.7143       11.1739       0.4673         0.2427
+ XRPUSDT  RANGE VWAP_2.5  SHORT  97.11 1.14220 1.078637 1.144243 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 83.0189        5.8929       0.2024         0.1789
+DOGEUSDT  RANGE VWAP_2.5  SHORT  93.60 0.07712 0.073472 0.077224 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 77.1930        4.9647       0.2905         0.1343
+ATOMUSDT  RANGE VWAP_2.0  SHORT  93.34 1.58750 1.554368 1.589607    震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归 76.4045        2.1316       0.2436         0.1327
+AVAXUSDT  RANGE VWAP_2.0  SHORT  92.85 6.84300 6.703313 6.851214    震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归 71.7391        2.0838       0.1537         0.1200
+LINKUSDT  RANGE VWAP_2.5  SHORT  92.70 7.91000 7.493015 7.918071 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 73.8095        5.5650       0.1277         0.1020

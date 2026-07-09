@@ -1,42 +1,41 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-07-09 07:53:07
+Generated At: 2026-07-09 09:21:57
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0    3225.59396 3247.6419     774.8106    2472.8313  -3635.051045         22.0479    208.420436 5860.009573 2026-07-09 07:53:06
+         10000.0   3287.278082 3299.9944     387.6111    2912.3833  -3573.320434         12.7163    208.466925 5860.938851 2026-07-09 09:21:57
 
 === MARKET STATES ===
   symbol   market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT    RANGE 62249.30000 50.8330       -1.0199       0.0425    0.0
- ETHUSDT    RANGE  1741.73000 72.8953       -1.5209       0.1104    0.0
- SOLUSDT    RANGE    77.77200 86.7277       -3.5788       0.3802    0.0
- XRPUSDT    RANGE     1.08970 67.9245       -3.6017       0.0406    0.0
-DOGEUSDT    RANGE     0.07222 56.7568       -4.5333      -0.0871    0.0
- BNBUSDT    RANGE   568.28000 81.4815       -1.5153       0.1666    0.0
- ADAUSDT    RANGE     0.16670 66.6667       -8.2461       0.0548    0.0
-AVAXUSDT    RANGE     6.46300 69.7674       -4.6701       0.1251    0.0
-LINKUSDT    RANGE     7.62600 62.2222       -3.2873       0.0077    0.0
- LTCUSDT    RANGE    43.59000 75.0000       -1.9741       0.1600    0.0
- APTUSDT    RANGE     0.61330 62.2642       -1.9350      -0.0978    0.0
- SUIUSDT    RANGE     0.70890 62.7907       -4.1854       0.0049    0.0
- ARBUSDT    RANGE     0.07660 60.0000       -2.1181       0.0328    0.0
-  OPUSDT    RANGE     0.09920 70.0000       -4.6824       0.3579    0.0
-ATOMUSDT    RANGE     1.55740 43.0894       -1.4150      -0.0388    0.0
-NEARUSDT    RANGE     1.89000 64.9573       -4.7909       0.1570    0.0
- DOTUSDT    RANGE     0.82400 66.6667       -4.6916       0.0707    0.0
- FILUSDT    RANGE     0.76240 55.2239       -3.0119       0.0470    0.0
- INJUSDT TREND_UP     4.69800 85.1852       -1.1627       0.5426    0.0
+ BTCUSDT    RANGE 62428.00000 63.7504       -0.7374       0.2628    0.0
+ ETHUSDT    RANGE  1747.86000 62.8850       -1.1804       0.2898    0.0
+ SOLUSDT TREND_UP    78.32300 73.5799       -2.7841       0.5728    0.0
+ XRPUSDT    RANGE     1.09250 62.2222       -3.3246       0.1910    0.0
+DOGEUSDT    RANGE     0.07268 67.6692       -3.8722       0.3823    0.0
+ BNBUSDT    RANGE   570.78000 67.6514       -1.0897       0.3293    0.0
+ ADAUSDT    RANGE     0.16830 76.6667       -7.2591       0.6337    0.0
+AVAXUSDT    RANGE     6.51400 72.0497       -3.7767       0.5835    0.0
+LINKUSDT    RANGE     7.67500 69.7987       -2.6206       0.4729    0.0
+ LTCUSDT    RANGE    43.99000 71.9512       -1.0591       0.5972    0.0
+ APTUSDT    RANGE     0.62290 78.6667       -0.3647       0.9283    0.0
+ SUIUSDT    RANGE     0.71670 69.1358       -2.9915       0.5897    0.0
+ ARBUSDT TREND_UP     0.07810 73.9130       -0.1186       1.1915    0.0
+  OPUSDT TREND_UP     0.10010 64.2857       -3.6093       0.6131    0.0
+ATOMUSDT    RANGE     1.57170 68.8889       -0.4550       0.3587    0.0
+NEARUSDT TREND_UP     1.90820 64.9541       -3.8197       0.6308    0.0
+ DOTUSDT    RANGE     0.83200 76.9231       -3.6988       0.6140    0.0
+ FILUSDT TREND_UP     0.77390 67.2727       -1.4882       0.8216    0.0
+ INJUSDT TREND_UP     4.86500 78.0822        2.3479       1.3412    0.0
 
 === OPEN POSITIONS ===
  symbol side strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
-INJUSDT LONG VWAP_2.5  4.616 4.756987 4.672648 387.1995 1161.5986       3.0   0.5 2026-07-09 04:49:38
-DOTUSDT LONG VWAP_2.5  0.823 0.865693 0.823000 387.6111 1162.8333       3.0   0.5 2026-07-09 03:50:59
+DOTUSDT LONG VWAP_2.5  0.823 0.865693 0.826923 387.6111 1162.8333       3.0   0.5 2026-07-09 03:50:59
 
 === POSITION DECISIONS ===
-               time  symbol     type     action                reason  current_price  pnl_pct  pnl_usd   market strategy side  entry       tp       sl
-2026-07-09 07:53:06 ACCOUNT  ACCOUNT    FUNDING       本轮收取资金费 0.0465U            NaN      NaN      NaN      NaN      NaN  NaN    NaN      NaN      NaN
-2026-07-09 07:53:06 INJUSDT POSITION    MOVE_SL             盈利扩大，上移止损          4.698   1.7764  20.6350 TREND_UP VWAP_2.5 LONG  4.616 4.756987 4.649890
-2026-07-09 07:53:06 DOTUSDT POSITION PARTIAL_TP 达到第一目标，部分止盈并上移止损到入场附近          0.824   0.1215   1.4129    RANGE VWAP_2.5 LONG  0.823 0.865693 0.821929
+               time  symbol     type  action          reason  current_price  pnl_pct  pnl_usd   market strategy side  entry       tp       sl
+2026-07-09 09:21:57 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0465U            NaN      NaN      NaN      NaN      NaN  NaN    NaN      NaN      NaN
+2026-07-09 09:21:57 INJUSDT POSITION   CLOSE            触发止盈          4.865   5.3943  61.7306 TREND_UP VWAP_2.5 LONG  4.616 4.756987 4.672648
+2026-07-09 09:21:57 DOTUSDT POSITION MOVE_SL       盈利扩大，上移止损          0.832   1.0936  12.7163    RANGE VWAP_2.5 LONG  0.823 0.865693 0.823000
 
 === NEW ENTRY SIGNALS ===
 No new entry signals.

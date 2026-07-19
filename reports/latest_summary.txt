@@ -1,49 +1,44 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-07-19 14:14:45
+Generated At: 2026-07-19 16:33:17
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   3321.382528 3336.9825     801.2618    2535.7207  -3413.774843         15.5999    217.008607 6093.745016 2026-07-19 14:14:45
+         10000.0   3314.068508 3332.2296     400.7085    2931.5211  -3421.040787         18.1611    217.056682 6094.706344 2026-07-19 16:33:17
 
 === MARKET STATES ===
   symbol market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT  RANGE 64696.50000 62.6325        0.9677       0.0089   0.00
- ETHUSDT  RANGE  1868.99000 80.2597        0.0451       0.0706   0.00
- SOLUSDT  RANGE    76.00100 67.6000       -0.3751       0.0718   0.00
- XRPUSDT  RANGE     1.09670 68.5714       -0.1451       0.0856   0.00
-DOGEUSDT  RANGE     0.07237 65.0000       -1.1383       0.0294   0.00
- BNBUSDT  RANGE   568.36000 55.5556       -1.0341      -0.0002   0.00
- ADAUSDT  RANGE     0.16640 72.7273        1.5026       0.1109   0.00
-AVAXUSDT  RANGE     6.56000 46.6667       -0.4644      -0.1001   0.00
-LINKUSDT  RANGE     8.34300 64.7059        0.3843       0.0025   0.00
- LTCUSDT  RANGE    46.75000 35.7143        2.9264      -0.1010   0.00
- APTUSDT  RANGE     0.60480 47.8261       -1.4051      -0.0847   0.00
- SUIUSDT  RANGE     0.74200 88.2353       -0.3894       0.0609   0.00
- ARBUSDT  RANGE     0.08810 83.3333       -1.3740       0.2641   0.00
-  OPUSDT  RANGE     0.09530 33.3333       -4.2671      -0.0658  88.36
-ATOMUSDT  RANGE     1.49220 61.3636       -2.6588      -0.0115   0.00
-NEARUSDT  RANGE     1.92580 84.4444       -3.4575       0.1303   0.00
- DOTUSDT  RANGE     0.83500 40.0000       -1.6190      -0.0910   0.00
- FILUSDT  RANGE     0.74590 70.3704       -3.4864      -0.0549   0.00
- INJUSDT  RANGE     5.09600 58.3333        1.1651      -0.0532   0.00
+ BTCUSDT  RANGE 64636.00000 20.7547        0.8362      -0.0508    0.0
+ ETHUSDT  RANGE  1868.39000 42.9412       -0.0555      -0.0024    0.0
+ SOLUSDT  RANGE    76.19100 69.9115       -0.1500       0.0820    0.0
+ XRPUSDT  RANGE     1.09630 73.3333       -0.2191       0.0460    0.0
+DOGEUSDT  RANGE     0.07255 70.5882       -0.9366       0.0890    0.0
+ BNBUSDT  RANGE   568.36000 43.7500       -1.0260      -0.0282    0.0
+ ADAUSDT  RANGE     0.16560 50.0000        0.9610      -0.1021    0.0
+AVAXUSDT  RANGE     6.54700 33.3333       -0.6720      -0.1536    0.0
+LINKUSDT  RANGE     8.35200 35.0000        0.4523      -0.0539    0.0
+ LTCUSDT  RANGE    46.85000 21.8750        3.0963      -0.1784    0.0
+ APTUSDT  RANGE     0.60430 45.4545       -1.5147      -0.0638    0.0
+ SUIUSDT  RANGE     0.74700 79.0698        0.2320       0.2094    0.0
+ ARBUSDT  RANGE     0.08860 85.7143       -0.8092       0.2918    0.0
+  OPUSDT  RANGE     0.09480 40.0000       -4.7379      -0.2577    0.0
+ATOMUSDT  RANGE     1.49430 78.3333       -2.5008       0.1204    0.0
+NEARUSDT  RANGE     1.93630 61.8557       -2.9588       0.1671    0.0
+ DOTUSDT  RANGE     0.83500 33.3333       -1.6321      -0.1509    0.0
+ FILUSDT  RANGE     0.74160 41.5094       -4.0414      -0.2314    0.0
+ INJUSDT  RANGE     5.08500 42.4242        0.8193      -0.0932    0.0
 
 === OPEN POSITIONS ===
  symbol  side strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
-INJUSDT SHORT VWAP_2.5 5.1630 5.023844 5.098711 400.7085 1202.1254       3.0   0.5 2026-07-19 07:04:16
- OPUSDT  LONG VWAP_2.0 0.0953 0.099548 0.095207 400.5533 1201.6598       3.0   1.0 2026-07-19 14:14:45
+INJUSDT SHORT VWAP_2.5  5.163 5.023844 5.089743 400.7085 1202.1254       3.0   0.5 2026-07-19 07:04:16
 
 === POSITION DECISIONS ===
-               time  symbol     type  action                       reason  current_price  pnl_pct  pnl_usd market strategy  side  entry       tp       sl   margin  notional  leverage
-2026-07-19 14:14:45 ACCOUNT  ACCOUNT FUNDING              本轮收取资金费 0.0722U            NaN      NaN      NaN    NaN      NaN   NaN    NaN      NaN      NaN      NaN       NaN       NaN
-2026-07-19 14:14:45 INJUSDT POSITION MOVE_SL                    盈利扩大，下移止损         5.0960   1.3148  15.5999  RANGE VWAP_2.5 SHORT 5.1630 5.023844 5.106196      NaN       NaN       NaN
-2026-07-19 14:14:45 FILUSDT POSITION   CLOSE                         触发止损         0.7459  -0.4139  -5.9500  RANGE VWAP_2.5  LONG 0.7490 0.772612 0.747971      NaN       NaN       NaN
-2026-07-19 14:14:45  OPUSDT POSITION   CLOSE                       保护止盈离场         0.0953   0.1050   0.3013  RANGE VWAP_2.5  LONG 0.0952 0.099510 0.095528      NaN       NaN       NaN
-2026-07-19 14:14:45  OPUSDT    ENTRY    OPEN 震荡市场中价格低于 VWAP 2%，偏离足够，做多等回归         0.0953   0.0000   0.0000  RANGE VWAP_2.0  LONG 0.0953 0.099548 0.095207 400.5533 1201.6598       3.0
+               time  symbol     type  action          reason  current_price  pnl_pct  pnl_usd market strategy  side  entry       tp       sl
+2026-07-19 16:33:17 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0481U            NaN      NaN      NaN    NaN      NaN   NaN    NaN      NaN      NaN
+2026-07-19 16:33:17 INJUSDT POSITION MOVE_SL       盈利扩大，下移止损         5.0850   1.5339  18.1611  RANGE VWAP_2.5 SHORT 5.1630 5.023844 5.098711
+2026-07-19 16:33:17  OPUSDT POSITION   CLOSE            触发止损         0.0948  -0.5247  -7.2659  RANGE VWAP_2.0  LONG 0.0953 0.099548 0.095207
 
 === NEW ENTRY SIGNALS ===
-symbol market strategy action  entry       tp       sl  score                       reason   margin  notional  leverage  risk_amount  open_fee
-OPUSDT  RANGE VWAP_2.0   LONG 0.0953 0.099548 0.095207  88.36 震荡市场中价格低于 VWAP 2%，偏离足够，做多等回归 400.5533 1201.6598       3.0      16.6897    0.9613
+No new entry signals.
 
 === MARKET SCAN ===
-symbol market strategy action  score  entry       tp       sl                       reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
-OPUSDT  RANGE VWAP_2.0   LONG  88.36 0.0953 0.099548 0.095207 震荡市场中价格低于 VWAP 2%，偏离足够，做多等回归 33.3333       -4.2671      -0.0658         0.0974
+No market scan signals.

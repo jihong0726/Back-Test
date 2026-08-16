@@ -1,26 +1,22 @@
 {
   "INJUSDT": {
     "symbol": "INJUSDT",
-    "side": "LONG",
-    "strategy": "VWAP_2.5",
-    "market": "RANGE",
-    "entry": 4.074,
-    "tp": 4.40861676,
-    "sl": 4.06814286,
+    "side": "SHORT",
+    "strategy": "TrendPullback_Short",
+    "market": "TREND_DOWN",
+    "entry": 4.063,
+    "tp": 4.0446,
+    "sl": 4.0745,
     "size": 1.0,
-    "status": "CLOSED",
+    "status": "OPEN",
     "partial_taken": false,
-    "opened_at": "2026-08-17 04:51:29",
-    "last_score": 98.94,
-    "margin": 300.5115,
-    "notional": 901.5345,
+    "opened_at": "2026-08-17 06:35:21",
+    "last_score": 92.39,
+    "margin": 297.7252,
+    "notional": 893.1756,
     "leverage": 3.0,
-    "risk_amount": 12.5213,
-    "stop_distance_pct": 0.1438,
-    "closed_at": "2026-08-17 05:01:43",
-    "exit_price": 4.067,
-    "exit_reason": "STOP_LOSS",
-    "realized_pnl": -2.2703
+    "risk_amount": 12.4052,
+    "stop_distance_pct": 0.283
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
@@ -31,7 +27,7 @@
     "tp": 0.68345216,
     "sl": 0.67219283,
     "size": 1.0,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": false,
     "opened_at": "2026-08-17 05:42:44",
     "last_score": 100,
@@ -39,7 +35,11 @@
     "notional": 892.812,
     "leverage": 3.0,
     "risk_amount": 12.4002,
-    "stop_distance_pct": 0.253
+    "stop_distance_pct": 0.253,
+    "closed_at": "2026-08-17 06:35:21",
+    "exit_price": 0.6703,
+    "exit_reason": "PROTECTIVE_EXIT",
+    "realized_pnl": 1.0207
   },
   "AVAXUSDT": {
     "symbol": "AVAXUSDT",
@@ -165,7 +165,7 @@
     "tp": 0.18135164,
     "sl": 0.17641846,
     "size": 1.0,
-    "status": "OPEN",
+    "status": "CLOSED",
     "partial_taken": false,
     "opened_at": "2026-08-17 05:26:55",
     "last_score": 99.25,
@@ -173,7 +173,11 @@
     "notional": 895.4009,
     "leverage": 3.0,
     "risk_amount": 12.4361,
-    "stop_distance_pct": 0.264
+    "stop_distance_pct": 0.264,
+    "closed_at": "2026-08-17 06:35:21",
+    "exit_price": 0.1758,
+    "exit_reason": "STOP_LOSS",
+    "realized_pnl": -1.2254
   },
   "ETHUSDT": {
     "symbol": "ETHUSDT",

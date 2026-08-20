@@ -1,44 +1,50 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-08-20 16:59:42
+Generated At: 2026-08-20 17:36:11
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   2215.368161 2213.7809     267.2088    1946.5721  -4024.079688         -1.5873    251.500201 7017.462599 2026-08-20 16:59:41
+         10000.0   2209.105104 2209.1051     530.4908    1678.6143  -4029.053535             0.0    251.516234 7019.377078 2026-08-20 17:36:11
 
 === MARKET STATES ===
-  symbol   market      close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT TREND_UP 71589.1000 74.7026        7.9580       1.0625    0.0
- ETHUSDT TREND_UP  2282.1600 66.6367       11.2563       0.6103    0.0
- SOLUSDT TREND_UP    87.5210 62.6735       10.4354       0.6242    0.0
- XRPUSDT TREND_UP     1.1534 92.4812       10.6325       1.7793    0.0
-DOGEUSDT TREND_UP     0.0768 72.9167        6.0586       0.7842    0.0
- BNBUSDT TREND_UP   640.1800 55.9124        4.6159       0.5829    0.0
- ADAUSDT TREND_UP     0.1895 81.2500        6.0619       1.3461    0.0
-AVAXUSDT TREND_UP     6.9170 72.9730        6.1559       0.6993    0.0
-LINKUSDT TREND_UP    10.6560 58.4071        9.3967       0.3707    0.0
- LTCUSDT TREND_UP    47.5100 71.1538        5.1445       0.6412    0.0
- APTUSDT TREND_UP     0.5712 88.0597        7.1648       1.0503    0.0
- SUIUSDT TREND_UP     0.7228 86.8217        7.0935       1.2800    0.0
- ARBUSDT TREND_UP     0.0897 57.1429       13.1535       0.3136    0.0
-  OPUSDT TREND_UP     0.0914 90.9091        7.6372       0.9764    0.0
-ATOMUSDT TREND_UP     1.4958 55.1471        3.8259       0.4435    0.0
-NEARUSDT TREND_UP     1.7598 77.2727        7.0868       0.5439    0.0
- DOTUSDT TREND_UP     0.8040 66.6667        5.0388       0.7445    0.0
- FILUSDT TREND_UP     0.6867 91.4286        5.8867       1.0751    0.0
- INJUSDT TREND_UP     4.7620 86.9159       12.5330       1.5134    0.0
+  symbol   market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
+ BTCUSDT TREND_UP 71960.70000 71.7047        8.3376       0.7841   0.00
+ ETHUSDT TREND_UP  2289.96000 62.2421       11.3782       0.4613   0.00
+ SOLUSDT TREND_UP    87.57700 57.9365       10.2624       0.3213   0.00
+ XRPUSDT TREND_UP     1.15300 45.6044       10.2419       0.6686   0.00
+DOGEUSDT TREND_UP     0.07668 51.8519        5.7437       0.1903   0.00
+ BNBUSDT TREND_UP   643.68000 81.4136        5.0730       0.5804   0.00
+ ADAUSDT TREND_UP     0.18960 47.8261        6.0139       0.5533   0.00
+AVAXUSDT TREND_UP     6.89600 37.3494        5.8548       0.1353   0.00
+LINKUSDT TREND_UP    10.63700 41.8033        9.1212       0.0359   0.00
+ LTCUSDT TREND_UP    47.38000 35.7143        4.6558       0.0888   0.00
+ APTUSDT TREND_UP     0.56480 41.1765        5.8726      -0.0720   0.00
+ SUIUSDT TREND_UP     0.72390 53.8462        7.0108       0.6180   0.00
+ ARBUSDT TREND_UP     0.08920 25.0000       12.3079      -0.2069  89.14
+  OPUSDT TREND_UP     0.09070 12.5000        6.8027      -0.0611  92.34
+ATOMUSDT TREND_UP     1.49540 38.3648        3.7719       0.0636   0.00
+NEARUSDT TREND_UP     1.76340 67.3913        7.2637       0.4029   0.00
+ DOTUSDT TREND_UP     0.80200 25.0000        4.7222       0.1492   0.00
+ FILUSDT TREND_UP     0.68730 47.0000        5.8730       0.4187   0.00
+ INJUSDT TREND_UP     4.79900 67.7419       13.2996       1.1676   0.00
 
 === OPEN POSITIONS ===
- symbol  side strategy   entry          tp          sl   margin  notional  leverage  size           opened_at
-ETHUSDT SHORT VWAP_2.5 2277.65 2048.967269 2285.924286 267.2088  801.6264       3.0   1.0 2026-08-20 16:19:59
+ symbol side           strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
+ARBUSDT LONG TrendPullback_Long 0.0892 0.089669 0.088907 265.2454  795.7362       3.0   1.0 2026-08-20 17:36:11
+ OPUSDT LONG TrendPullback_Long 0.0907 0.091100 0.090450 265.2454  795.7362       3.0   1.0 2026-08-20 17:36:11
 
 === POSITION DECISIONS ===
-               time  symbol     type  action          reason  current_price  pnl_pct  pnl_usd   market strategy  side     entry          tp          sl
-2026-08-20 16:59:41 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0321U            NaN      NaN      NaN      NaN      NaN   NaN       NaN         NaN         NaN
-2026-08-20 16:59:41 ADAUSDT POSITION   CLOSE            触发止损         0.1895  -1.1609 -10.0571 TREND_UP VWAP_2.5 SHORT    0.1873    0.178505    0.188050
-2026-08-20 16:59:41 ETHUSDT POSITION    HOLD      结构未失效，继续持有      2282.1600  -0.1976  -1.5873 TREND_UP VWAP_2.5 SHORT 2277.6500 2048.967269 2285.924286
+               time  symbol     type  action                    reason  current_price  pnl_pct  pnl_usd   market           strategy  side     entry          tp          sl   margin  notional  leverage
+2026-08-20 17:36:11 ACCOUNT  ACCOUNT FUNDING           本轮收取资金费 0.0160U            NaN      NaN      NaN      NaN                NaN   NaN       NaN         NaN         NaN      NaN       NaN       NaN
+2026-08-20 17:36:11 ETHUSDT POSITION   CLOSE                      触发止损      2289.9600  -0.5376  -4.9738 TREND_UP           VWAP_2.5 SHORT 2277.6500 2048.967269 2285.924286      NaN       NaN       NaN
+2026-08-20 17:36:11  OPUSDT    ENTRY    OPEN 上升趋势中回踩 EMA20，RSI 偏低，顺势做多         0.0907   0.0000   0.0000 TREND_UP TrendPullback_Long  LONG    0.0907    0.091100    0.090450 265.2454  795.7362       3.0
+2026-08-20 17:36:11 ARBUSDT    ENTRY    OPEN 上升趋势中回踩 EMA20，RSI 偏低，顺势做多         0.0892   0.0000   0.0000 TREND_UP TrendPullback_Long  LONG    0.0892    0.089669    0.088907 265.2454  795.7362       3.0
 
 === NEW ENTRY SIGNALS ===
-No new entry signals.
+ symbol   market           strategy action  entry       tp       sl  score                    reason   margin  notional  leverage  risk_amount  open_fee
+ OPUSDT TREND_UP TrendPullback_Long   LONG 0.0907 0.091100 0.090450  92.34 上升趋势中回踩 EMA20，RSI 偏低，顺势做多 265.2454  795.7362       3.0      11.0519    0.6366
+ARBUSDT TREND_UP TrendPullback_Long   LONG 0.0892 0.089669 0.088907  89.14 上升趋势中回踩 EMA20，RSI 偏低，顺势做多 265.2454  795.7362       3.0      11.0519    0.6366
 
 === MARKET SCAN ===
-No market scan signals.
+ symbol   market           strategy action  score  entry       tp       sl                    reason  rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
+ OPUSDT TREND_UP TrendPullback_Long   LONG  92.34 0.0907 0.091100 0.090450 上升趋势中回踩 EMA20，RSI 偏低，顺势做多  12.5        6.8027      -0.0611         0.2756
+ARBUSDT TREND_UP TrendPullback_Long   LONG  89.14 0.0892 0.089669 0.088907 上升趋势中回踩 EMA20，RSI 偏低，顺势做多  25.0       12.3079      -0.2069         0.3283

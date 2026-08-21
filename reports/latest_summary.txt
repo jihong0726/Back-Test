@@ -1,40 +1,39 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-08-21 16:01:56
+Generated At: 2026-08-21 16:50:35
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   2080.998078 2080.1453     249.7935    1830.3518  -4134.645226         -0.8527    252.973581 7062.166726 2026-08-21 16:01:56
+         10000.0   2042.920246 2042.9202          0.0    2042.9202  -4172.708071             0.0    252.988569  7062.76623 2026-08-21 16:50:35
 
 === MARKET STATES ===
   symbol   market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT TREND_UP 76447.40000 55.5363       11.3887       0.5133    0.0
- ETHUSDT TREND_UP  2376.49000 41.4714       11.3541       0.1226    0.0
- SOLUSDT TREND_UP    90.58800 66.5612       10.4512       0.2223    0.0
- XRPUSDT TREND_UP     1.31970 65.9574       14.5905       0.6185    0.0
-DOGEUSDT TREND_UP     0.08361 43.1818       10.0368       0.0610    0.0
- BNBUSDT TREND_UP   671.71000 53.0435        7.4568       0.3948    0.0
- ADAUSDT TREND_UP     0.20950 35.5556       12.7461       0.0279    0.0
-AVAXUSDT TREND_UP     7.51100 74.7368       10.0650       0.9508    0.0
-LINKUSDT TREND_UP    11.54800 27.7419       14.2530       1.8456    0.0
- LTCUSDT TREND_UP    49.71000 82.9268        7.3561       0.9964    0.0
- APTUSDT TREND_UP     0.60150 84.9057       10.8624       1.3042    0.0
- SUIUSDT TREND_UP     0.77870 72.3214       10.9284       0.5202    0.0
- ARBUSDT TREND_UP     0.09370 75.0000       13.7456       0.7453    0.0
-  OPUSDT TREND_UP     0.09890 65.0000       11.9822       0.4423    0.0
-ATOMUSDT TREND_UP     1.57410 83.8624        8.6099       1.5173    0.0
-NEARUSDT TREND_UP     1.92230 88.6631       14.0041       2.7994    0.0
- DOTUSDT TREND_UP     0.86900 85.7143       10.4475       1.1402    0.0
- FILUSDT TREND_UP     0.76700 64.5570       14.5409       0.8362    0.0
- INJUSDT TREND_UP     4.88100 73.4940       11.0903       0.7971    0.0
+ BTCUSDT TREND_UP 78230.60000 88.2633       13.4817       1.6222    0.0
+ ETHUSDT TREND_UP  2430.12000 83.5691       13.4561       1.5638    0.0
+ SOLUSDT TREND_UP    92.62700 50.0000       12.5779       1.4522    0.0
+ XRPUSDT TREND_UP     1.38410 75.1582       19.3711       3.0485    0.0
+DOGEUSDT TREND_UP     0.08511 82.9268       11.7839       1.0336    0.0
+ BNBUSDT TREND_UP   680.83000 79.5993        8.7642       0.8411    0.0
+ ADAUSDT TREND_UP     0.21500 79.4118       15.3510       1.3521    0.0
+AVAXUSDT TREND_UP     7.64800 88.2759       11.8493       1.6259    0.0
+LINKUSDT TREND_UP    11.68500 71.0744       15.1649       1.5298    0.0
+ LTCUSDT TREND_UP    51.00000 88.5246        9.3167       1.6119    0.0
+ APTUSDT TREND_UP     0.61490 50.0000       13.1409       1.8929    0.0
+ SUIUSDT TREND_UP     0.80070 97.1014       13.6272       1.8636    0.0
+ ARBUSDT TREND_UP     0.09600 80.7692       16.2860       2.0010    0.0
+  OPUSDT TREND_UP     0.10070 50.0000       13.7925       1.4402    0.0
+ATOMUSDT TREND_UP     1.58720 77.1812        9.3585       1.0026    0.0
+NEARUSDT TREND_UP     1.93380 59.5745       14.3306       1.4977    0.0
+ DOTUSDT TREND_UP     0.88500 94.1176       12.1624       1.5923    0.0
+ FILUSDT TREND_UP     0.77600 91.8605       15.6566       1.1229    0.0
+ INJUSDT TREND_UP     5.00400 98.9247       13.6288       1.7368    0.0
 
 === OPEN POSITIONS ===
- symbol  side strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
-XRPUSDT SHORT VWAP_2.5 1.3182 1.150126 1.324464 249.7935  749.3805       3.0   1.0 2026-08-21 15:23:56
+No open positions.
 
 === POSITION DECISIONS ===
                time  symbol     type  action          reason  current_price  pnl_pct  pnl_usd   market strategy  side  entry       tp       sl
-2026-08-21 16:01:56 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0150U            NaN      NaN      NaN      NaN      NaN   NaN    NaN      NaN      NaN
-2026-08-21 16:01:56 XRPUSDT POSITION    HOLD      结构未失效，继续持有         1.3197  -0.1137  -0.8527 TREND_UP VWAP_2.5 SHORT 1.3182 1.150126 1.324464
+2026-08-21 16:50:35 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0150U            NaN      NaN      NaN      NaN      NaN   NaN    NaN      NaN      NaN
+2026-08-21 16:50:35 XRPUSDT POSITION   CLOSE            触发止损         1.3841  -4.7612 -38.0628 TREND_UP VWAP_2.5 SHORT 1.3182 1.150126 1.324464
 
 === NEW ENTRY SIGNALS ===
 No new entry signals.

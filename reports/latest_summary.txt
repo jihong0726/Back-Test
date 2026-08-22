@@ -1,61 +1,62 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-08-22 19:58:44
+Generated At: 2026-08-22 20:36:32
 
 === ACCOUNT ===
  initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   1985.346632 1985.8415     476.7646    1509.0769  -4202.658894          0.4949    254.545383 7113.753945 2026-08-22 19:58:44
+         10000.0   1982.407783 1981.7803     476.2644    1505.5159   -4204.99822         -0.6275    254.573989  7114.89698 2026-08-22 20:36:32
 
 === MARKET STATES ===
-  symbol     market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT      RANGE 77125.00000 81.9764        7.8320       0.1356  96.75
- ETHUSDT      RANGE  2423.25000 86.3535        8.1127       0.2867  97.58
- SOLUSDT TREND_DOWN    93.23100 72.9376        6.6463       0.1207  88.66
- XRPUSDT TREND_DOWN     1.48650 58.1006       11.9819      -0.0157   0.00
-DOGEUSDT TREND_DOWN     0.08986 69.2308        9.5784      -0.0277   0.00
- BNBUSDT TREND_DOWN   694.38000 82.5704        5.3022       0.1752  92.96
- ADAUSDT TREND_DOWN     0.22390 77.7778        9.7835       0.2867  89.58
-AVAXUSDT TREND_DOWN     7.52200 75.0000        3.9306       0.2146  89.18
-LINKUSDT      RANGE    11.69300 74.8571        8.7898       0.6068  95.34
- LTCUSDT TREND_DOWN    51.43000 79.6610        3.6480       0.2710  89.49
- APTUSDT TREND_DOWN     0.63950 82.6531        7.0987       0.1617  92.89
- SUIUSDT TREND_DOWN     0.82870 69.1429        7.4452      -0.0775   0.00
- ARBUSDT TREND_DOWN     0.09790 83.3333        8.6402       0.0569  92.31
-  OPUSDT TREND_DOWN     0.10900 71.4286        9.7098       0.3746  90.06
-ATOMUSDT TREND_DOWN     1.57250 75.7576        5.4587       0.2783  89.53
-NEARUSDT TREND_DOWN     1.89870 92.1875        5.4345       0.2102  93.16
- DOTUSDT TREND_DOWN     0.92300 84.6154        5.9566       0.2339  93.29
- FILUSDT TREND_DOWN     0.77110 71.0000        7.7659       0.1606  88.88
- INJUSDT TREND_DOWN     4.81100 83.3333        3.4659       0.2946  93.62
+  symbol     market      close    rsi7  vwap_dev_pct  ema_dev_pct  score
+ BTCUSDT      RANGE 77221.9000 64.6527        7.9337       0.1059   0.00
+ ETHUSDT      RANGE  2430.0000 71.6137        8.3403       0.2236  93.23
+ SOLUSDT      RANGE    93.8930 75.4454        7.3330       0.3562  93.96
+ XRPUSDT      RANGE     1.5098 66.0784       13.5889       0.5440  90.99
+DOGEUSDT      RANGE     0.0909 85.5422       10.7562       0.5706  99.14
+ BNBUSDT      RANGE   695.7300 68.2014        5.4375       0.1349  88.74
+ ADAUSDT TREND_DOWN     0.2265 77.7778       10.9258       0.6954  91.82
+AVAXUSDT      RANGE     7.5750 73.3333        4.6355       0.4202  94.31
+LINKUSDT      RANGE    11.7990 70.3704        9.7022       0.6494  95.57
+ LTCUSDT      RANGE    51.6700 90.2439        4.0963       0.4002  98.20
+ APTUSDT TREND_DOWN     0.6390 56.3380        6.9549      -0.1537   0.00
+ SUIUSDT TREND_DOWN     0.8340 62.1495        8.0997       0.1129   0.00
+ ARBUSDT      RANGE     0.0989 84.6154        9.6927       0.5211  98.87
+  OPUSDT      RANGE     0.1097 65.3846       10.3290       0.3752  90.06
+ATOMUSDT      RANGE     1.5710 45.1613        5.3360      -0.1041   0.00
+NEARUSDT TREND_DOWN     1.9122 83.0380        6.1194       0.4934  94.71
+ DOTUSDT TREND_DOWN     0.9310 81.8182        6.8502       0.5257  94.89
+ FILUSDT      RANGE     0.7770 77.3585        8.5324       0.4295  94.36
+ INJUSDT TREND_DOWN     4.8240 70.4918        3.6954       0.2577  89.42
 
 === OPEN POSITIONS ===
- symbol  side strategy    entry           tp           sl   margin  notional  leverage  size           opened_at
-ETHUSDT SHORT VWAP_2.5  2424.01  2240.950015  2429.545000 238.3823   715.147       3.0   1.0 2026-08-22 19:45:31
-BTCUSDT SHORT VWAP_2.5 77154.20 71514.299534 77274.085714 238.3823   715.147       3.0   1.0 2026-08-22 19:45:31
+  symbol  side strategy      entry           tp           sl   margin  notional  leverage  size           opened_at
+DOGEUSDT SHORT VWAP_2.5     0.0909     0.082072     0.091341 237.8821  713.6464       3.0   1.0 2026-08-22 20:36:32
+ BTCUSDT SHORT VWAP_2.5 77154.2000 71514.299534 77274.085714 238.3823  715.1470       3.0   1.0 2026-08-22 19:45:31
 
 === POSITION DECISIONS ===
-               time  symbol     type  action          reason  current_price  pnl_pct  pnl_usd market strategy  side    entry           tp           sl
-2026-08-22 19:58:44 ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0286U            NaN      NaN      NaN    NaN      NaN   NaN      NaN          NaN          NaN
-2026-08-22 19:58:44 ETHUSDT POSITION    HOLD      结构未失效，继续持有        2423.25   0.0314   0.2242  RANGE VWAP_2.5 SHORT  2424.01  2240.950015  2429.545000
-2026-08-22 19:58:44 BTCUSDT POSITION    HOLD      结构未失效，继续持有       77125.00   0.0379   0.2707  RANGE VWAP_2.5 SHORT 77154.20 71514.299534 77274.085714
+               time   symbol     type  action                          reason  current_price  pnl_pct  pnl_usd market strategy  side      entry           tp           sl   margin  notional  leverage
+2026-08-22 20:36:32  ACCOUNT  ACCOUNT FUNDING                 本轮收取资金费 0.0286U            NaN      NaN      NaN    NaN      NaN   NaN        NaN          NaN          NaN      NaN       NaN       NaN
+2026-08-22 20:36:32  ETHUSDT POSITION   CLOSE                            触发止损      2430.0000  -0.2465  -2.3393  RANGE VWAP_2.5 SHORT  2424.0100  2240.950015  2429.545000      NaN       NaN       NaN
+2026-08-22 20:36:32  BTCUSDT POSITION    HOLD                      结构未失效，继续持有     77221.9000  -0.0877  -0.6275  RANGE VWAP_2.5 SHORT 77154.2000 71514.299534 77274.085714      NaN       NaN       NaN
+2026-08-22 20:36:32 DOGEUSDT    ENTRY    OPEN 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归         0.0909   0.0000   0.0000  RANGE VWAP_2.5 SHORT     0.0909     0.082072     0.091341 237.8821  713.6464       3.0
 
 === NEW ENTRY SIGNALS ===
-No new entry signals.
+  symbol market strategy action  entry       tp       sl  score                          reason   margin  notional  leverage  risk_amount  open_fee
+DOGEUSDT  RANGE VWAP_2.5  SHORT 0.0909 0.082072 0.091341  99.14 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 237.8821  713.6464       3.0       9.9118    0.5709
 
 === MARKET SCAN ===
-  symbol     market            strategy action  score      entry           tp           sl                          reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
- ETHUSDT      RANGE            VWAP_2.5  SHORT  97.58  2423.2500  2241.411807  2428.409286 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 86.3535        8.1127       0.2867         0.2129
- BTCUSDT      RANGE            VWAP_2.5  SHORT  96.75 77125.0000 71523.279373 77243.957143 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 81.9764        7.8320       0.1356         0.1542
-LINKUSDT      RANGE            VWAP_2.5  SHORT  95.34    11.6930    10.748247    11.743429 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 74.8571        8.7898       0.6068         0.4313
- INJUSDT TREND_DOWN TrendPullback_Short  SHORT  93.62     4.8110     4.782886     4.828571   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 83.3333        3.4659       0.2946         0.3652
- DOTUSDT TREND_DOWN TrendPullback_Short  SHORT  93.29     0.9230     0.917629     0.926357   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 84.6154        5.9566       0.2339         0.3637
-NEARUSDT TREND_DOWN TrendPullback_Short  SHORT  93.16     1.8987     1.882037     1.909114   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 92.1875        5.4345       0.2102         0.5485
- BNBUSDT TREND_DOWN TrendPullback_Short  SHORT  92.96   694.3800   691.738857   696.030714   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 82.5704        5.3022       0.1752         0.2377
- APTUSDT TREND_DOWN TrendPullback_Short  SHORT  92.89     0.6395     0.634563     0.642586   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 82.6531        7.0987       0.1617         0.4825
- ARBUSDT TREND_DOWN TrendPullback_Short  SHORT  92.31     0.0979     0.097397     0.098214   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 83.3333        8.6402       0.0569         0.3210
-  OPUSDT TREND_DOWN TrendPullback_Short  SHORT  90.06     0.1090     0.108337     0.109414   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 71.4286        9.7098       0.3746         0.3801
- ADAUSDT TREND_DOWN TrendPullback_Short  SHORT  89.58     0.2239     0.222026     0.225071   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 77.7778        9.7835       0.2867         0.5232
-ATOMUSDT TREND_DOWN TrendPullback_Short  SHORT  89.53     1.5725     1.565449     1.576907   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 75.7576        5.4587       0.2783         0.2803
- LTCUSDT TREND_DOWN TrendPullback_Short  SHORT  89.49    51.4300    51.192286    51.578571   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 79.6610        3.6480       0.2710         0.2889
-AVAXUSDT TREND_DOWN TrendPullback_Short  SHORT  89.18     7.5220     7.477886     7.549571   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 75.0000        3.9306       0.2146         0.3665
- FILUSDT TREND_DOWN TrendPullback_Short  SHORT  88.88     0.7711     0.766506     0.773971   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 71.0000        7.7659       0.1606         0.3724
- SOLUSDT TREND_DOWN TrendPullback_Short  SHORT  88.66    93.2310    92.727800    93.545500   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 72.9376        6.6463       0.1207         0.3373
+  symbol     market            strategy action  score     entry          tp          sl                          reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
+DOGEUSDT      RANGE            VWAP_2.5  SHORT  99.14    0.0909    0.082072    0.091341 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 85.5422       10.7562       0.5706         0.4848
+ ARBUSDT      RANGE            VWAP_2.5  SHORT  98.87    0.0989    0.090161    0.099236 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 84.6154        9.6927       0.5211         0.3394
+ LTCUSDT      RANGE            VWAP_2.5  SHORT  98.20   51.6700   49.636731   51.812143 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 90.2439        4.0963       0.4002         0.2751
+LINKUSDT      RANGE            VWAP_2.5  SHORT  95.57   11.7990   10.755486   11.848929 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 70.3704        9.7022       0.6494         0.4232
+ DOTUSDT TREND_DOWN TrendPullback_Short  SHORT  94.89    0.9310    0.926543    0.933786   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 81.8182        6.8502       0.5257         0.2992
+NEARUSDT TREND_DOWN TrendPullback_Short  SHORT  94.71    1.9122    1.895971    1.922343   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 83.0380        6.1194       0.4934         0.5304
+ FILUSDT      RANGE            VWAP_2.5  SHORT  94.36    0.7770    0.715915    0.779579 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 77.3585        8.5324       0.4295         0.3319
+AVAXUSDT      RANGE            VWAP_2.5  SHORT  94.31    7.5750    7.239420    7.602071 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 73.3333        4.6355       0.4202         0.3574
+ SOLUSDT      RANGE            VWAP_2.5  SHORT  93.96   93.8930   87.478208   94.190643 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 75.4454        7.3330       0.3562         0.3170
+ ETHUSDT      RANGE            VWAP_2.5  SHORT  93.23 2430.0000 2242.931809 2435.700000 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 71.6137        8.3403       0.2236         0.2346
+ ADAUSDT TREND_DOWN TrendPullback_Short  SHORT  91.82    0.2265    0.224671    0.227643   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 77.7778       10.9258       0.6954         0.5046
+ XRPUSDT      RANGE            VWAP_2.0  SHORT  90.99    1.5098    1.329179    1.521150    震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归 66.0784       13.5889       0.5440         0.7518
+  OPUSDT      RANGE            VWAP_2.0  SHORT  90.06    0.1097    0.099430    0.110200    震荡市场中价格高于 VWAP 2%，偏离足够，做空等回归 65.3846       10.3290       0.3752         0.4558
+ INJUSDT TREND_DOWN TrendPullback_Short  SHORT  89.42    4.8240    4.798514    4.839929   下降趋势中反弹到 EMA20 上方，RSI 偏高，顺势做空 70.4918        3.6954       0.2577         0.3302
+ BNBUSDT      RANGE            VWAP_2.5  SHORT  88.74  695.7300  659.850531  697.366429 震荡市场中价格显著高于 VWAP，且 RSI 偏高，做空等回归 68.2014        5.4375       0.1349         0.2352

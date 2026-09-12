@@ -1,31 +1,31 @@
 Version: V13.1_MARKET_SCAN_ENGINE_OPT
-Generated At: 2026-09-12 20:25:39
+Generated At: 2026-09-12 23:40:14
 
 === ACCOUNT ===
- initial_balance  cash_balance   equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
-         10000.0   1879.763372 1892.787      451.856     1440.931  -4170.356562         13.0237    263.625173 7371.425332 2026-09-12 20:25:39
+ initial_balance  cash_balance    equity  used_margin  free_margin  realized_pnl  unrealized_pnl  funding_paid  total_fees        last_updated
+         10000.0    1879.73626 1894.7166      451.856    1442.8606  -4170.356562         14.9804    263.652284 7371.425332 2026-09-12 23:40:13
 
 === MARKET STATES ===
   symbol   market       close    rsi7  vwap_dev_pct  ema_dev_pct  score
- BTCUSDT    RANGE 77280.50000 17.5657       -1.1011      -0.0252   0.00
- ETHUSDT    RANGE  2532.73000 25.6881        1.3764      -0.0081   0.00
- SOLUSDT    RANGE   102.19600 72.2689       -0.0949       0.1270   0.00
- XRPUSDT    RANGE     1.37040 30.7692       -1.5950      -0.0367   0.00
-DOGEUSDT    RANGE     0.08491 33.3333       -3.0877      -0.0394  88.22
- BNBUSDT    RANGE   735.44000 36.9863        0.0136      -0.0691   0.00
- ADAUSDT    RANGE     0.20860 25.0000       -2.7623      -0.0853  92.47
-AVAXUSDT    RANGE     7.44000 52.6316       -4.7369       0.0293   0.00
-LINKUSDT    RANGE    11.54100 40.3846       -5.0020      -0.0150   0.00
- LTCUSDT    RANGE    53.96000 39.2857       -0.7911      -0.0724   0.00
- APTUSDT    RANGE     0.61580 18.8679       -2.8168      -0.1974  97.09
- SUIUSDT    RANGE     0.72730 38.0952       -8.2183      -0.0060   0.00
- ARBUSDT    RANGE     0.14290 41.1765       -9.6043      -0.1235   0.00
-  OPUSDT TREND_UP     0.09740 20.0000       -4.6365      -0.0456  88.25
-ATOMUSDT    RANGE     1.63820 36.0656       -9.8128      -0.1092   0.00
-NEARUSDT    RANGE     2.36240 44.8905       -3.3030      -0.1240   0.00
- DOTUSDT    RANGE     1.04500 60.0000       -6.4118       0.1119   0.00
- FILUSDT    RANGE     0.81200 24.1379       -1.5320      -0.0073   0.00
- INJUSDT    RANGE     5.93500 24.3243       -2.9314      -0.1661  92.91
+ BTCUSDT    RANGE 77393.00000 47.0511       -0.9140       0.0093    0.0
+ ETHUSDT    RANGE  2533.87000 26.4177        1.3787      -0.1599    0.0
+ SOLUSDT    RANGE   101.98200 57.0652       -0.2309       0.0377    0.0
+ XRPUSDT    RANGE     1.36990 54.0984       -1.5917       0.0391    0.0
+DOGEUSDT    RANGE     0.08511 43.3962       -2.7793       0.0654    0.0
+ BNBUSDT    RANGE   735.25000 34.3195        0.0064      -0.0138    0.0
+ ADAUSDT    RANGE     0.20860 60.0000       -2.6885       0.0537    0.0
+AVAXUSDT    RANGE     7.43900 58.9286       -4.6662       0.1131    0.0
+LINKUSDT    RANGE    11.58900 70.6897       -4.1140       0.1155    0.0
+ LTCUSDT    RANGE    54.10000 54.5455       -0.4333       0.1469    0.0
+ APTUSDT    RANGE     0.61300 58.6207       -3.2464      -0.0694    0.0
+ SUIUSDT    RANGE     0.72730 53.7500       -8.0868       0.0981    0.0
+ ARBUSDT    RANGE     0.14410 66.6667       -8.4875       0.3163    0.0
+  OPUSDT    RANGE     0.09770 62.5000       -3.8805       0.2796    0.0
+ATOMUSDT    RANGE     1.63780 74.5223       -9.9698       0.3033    0.0
+NEARUSDT TREND_UP     2.40020 55.5556       -1.8657       0.4591    0.0
+ DOTUSDT    RANGE     1.03500 66.6667       -7.4600       0.0126    0.0
+ FILUSDT    RANGE     0.80800 55.7692       -2.0285      -0.0014    0.0
+ INJUSDT    RANGE     5.94800 40.0000       -2.8934      -0.0087    0.0
 
 === OPEN POSITIONS ===
   symbol side strategy  entry       tp       sl   margin  notional  leverage  size           opened_at
@@ -33,18 +33,13 @@ ATOMUSDT LONG VWAP_2.5 1.6358 1.813809 1.632414 226.1494  678.4483       3.0   1
   OPUSDT LONG VWAP_2.5 0.0957 0.103046 0.097444 225.7066  677.1199       3.0   0.5 2026-09-12 12:51:38
 
 === POSITION DECISIONS ===
-               time   symbol     type  action          reason  current_price  pnl_pct  pnl_usd   market strategy side  entry       tp       sl
-2026-09-12 20:25:39  ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0271U            NaN      NaN      NaN      NaN      NaN  NaN    NaN      NaN      NaN
-2026-09-12 20:25:39 ATOMUSDT POSITION    HOLD      结构未失效，继续持有         1.6382   0.1467   0.9954    RANGE VWAP_2.5 LONG 1.6358 1.813809 1.632414
-2026-09-12 20:25:39   OPUSDT POSITION MOVE_SL       盈利扩大，上移止损         0.0974   1.7764  12.0283 TREND_UP VWAP_2.5 LONG 0.0957 0.103046 0.095700
+               time   symbol     type  action          reason  current_price  pnl_pct  pnl_usd market strategy side  entry       tp       sl
+2026-09-12 23:40:13  ACCOUNT  ACCOUNT FUNDING 本轮收取资金费 0.0271U            NaN      NaN      NaN    NaN      NaN  NaN    NaN      NaN      NaN
+2026-09-12 23:40:13 ATOMUSDT POSITION    HOLD      结构未失效，继续持有         1.6378   0.1223   0.8295  RANGE VWAP_2.5 LONG 1.6358 1.813809 1.632414
+2026-09-12 23:40:13   OPUSDT POSITION    HOLD      结构未失效，继续持有         0.0977   2.0899  14.1509  RANGE VWAP_2.5 LONG 0.0957 0.103046 0.097444
 
 === NEW ENTRY SIGNALS ===
 No new entry signals.
 
 === MARKET SCAN ===
-  symbol   market           strategy action  score   entry       tp       sl                          reason    rsi7  vwap_dev_pct  ema_dev_pct  atr_ratio_pct
- APTUSDT    RANGE           VWAP_2.5   LONG  97.09 0.61580 0.633648 0.614129 震荡市场中价格显著低于 VWAP，且 RSI 偏低，做多等回归 18.8679       -2.8168      -0.1974         0.2714
- INJUSDT    RANGE           VWAP_2.5   LONG  92.91 5.93500 6.114233 5.921571 震荡市场中价格显著低于 VWAP，且 RSI 偏低，做多等回归 24.3243       -2.9314      -0.1661         0.2263
- ADAUSDT    RANGE           VWAP_2.5   LONG  92.47 0.20860 0.214526 0.208279 震荡市场中价格显著低于 VWAP，且 RSI 偏低，做多等回归 25.0000       -2.7623      -0.0853         0.1541
-  OPUSDT TREND_UP TrendPullback_Long   LONG  88.25 0.09740 0.097651 0.097243       上升趋势中回踩 EMA20，RSI 偏低，顺势做多 20.0000       -4.6365      -0.0456         0.1613
-DOGEUSDT    RANGE           VWAP_2.0   LONG  88.22 0.08491 0.087615 0.084832    震荡市场中价格低于 VWAP 2%，偏离足够，做多等回归 33.3333       -3.0877      -0.0394         0.0917
+No market scan signals.
